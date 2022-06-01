@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # In[1]:
-import neptune
+import os
 
 import time
 #Data Manipulation
@@ -73,7 +73,7 @@ model =get_inputs("Select model name",['rfr','gbr','etr'])
 model_code = get_inputs("Input model code in format Model 1, Model 2,...")
 if model_code in os.scandir(savepath):
     response = get_inputs("model code already present in the mlResults. Would you like to continue with this code and replace existing folder?", ['y','n'])
-    if response == 'n'
+    if response == 'n':
         model_code = get_inputs("Please enter different model code (format of Model 1, Model 2,...)")
 
 SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'COM', 'COK', 'CUB', 'CUW', 'DMA', 'DOM',
@@ -557,11 +557,11 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
 
 
 def replacement(dataset,year, save_path, ind_data, ind_meta, sids, pred):
-    prediction["dataset"] = prediction.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+    pred["dataset"] = pred.target.apply(lambda x: ind_meta[ind_meta["Indicator Code"]==x].Dataset.values[0])
     idx= pd.IndexSlice
-    dataset_codes = indicatorMeta[indicatorMeta.Dataset==dataset]["Indicator Code"].values.tolist()
+    dataset_codes = ind_meta[ind_meta.Dataset==dataset]["Indicator Code"].values.tolist()
     subset_data = ind_data[ind_data["Indicator Code"].isin(dataset_codes)][["Country Code","Indicator Code",str(year)]].set_index(["Country Code","Indicator Code"]).stack().unstack("Indicator Code")
-    subset_data = subset_data.loc[idx[SIDS,:],:]
+    subset_data = subset_data.loc[idx[sids,:],:]
     sub_pred = pred[(pred.year == year)&(pred.dataset==dataset)]#[["Country Code","prediction","target","year","dataset"]]
     #sub_pred = sub_pred.drop(columns="dataset").set_index(["target","Country Code","year"]).stack().unstack("target")#.index.droplevel(2)
     columns = np.unique(sub_pred.target).tolist()
@@ -578,11 +578,7 @@ def replacement(dataset,year, save_path, ind_data, ind_meta, sids, pred):
                 for j in subset_data.columns:
                     value = subset_data.loc[i,j]
                     if np.isnan(value):
-                        #n=n+1
-                        #if n in [1,10,50,100,200,1000]:
-                            #print(value)
-                            #print(i)
-                            #print(j)
+
                         results.loc[i,j] = sub_pred[(sub_pred["Country Code"]==i[0])&(sub_pred["target"]==j)].prediction.values[0]#sub_data.loc[i,j]
                         lower.loc[i,j] = sub_pred[(sub_pred["Country Code"]==i[0])&(sub_pred["target"]==j)].lower.values[0]
                         upper.loc[i,j] = sub_pred[(sub_pred["Country Code"]==i[0])&(sub_pred["target"]==j)].upper.values[0]
@@ -595,14 +591,14 @@ def replacement(dataset,year, save_path, ind_data, ind_meta, sids, pred):
             assert i in results.index.levels[0], f"cannot find "+ i + " for dataset " + dataset + " and year " + str(year)
         except:
             print(f"cannot find "+ i + " for dataset " + dataset + " and year " + str(year))
-            missed = prediction[(prediction.year == year)&(prediction.dataset==dataset)&(prediction["Country Code"]==i)]
+            missed = pred[(pred.year == year)&(pred.dataset==dataset)&(pred["Country Code"]==i)]
             p = pd.DataFrame(data = [missed.prediction.values], columns=missed.target.values, index=[(i,year)])
             l = pd.DataFrame(data = [missed.lower.values], columns=missed.target.values, index=[(i,year)])
             u = pd.DataFrame(data = [missed.upper.values], columns=missed.target.values, index=[(i,year)])
             results=pd.concat([results,p])
             lower=pd.concat([lower,l])
             upper=pd.concat([upper,u])
-    path = savepath+Model_code
+    path = save_path+model_code
     if  not os.path.exists(path):    
         os.makedirs(path)
 
@@ -626,7 +622,7 @@ def replacement(dataset,year, save_path, ind_data, ind_meta, sids, pred):
 def importance_script(save_path,importance):
     importance["dataset"] = importance.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
     importance.rename(columns={"target":"predicted indicator","names":"feature indicator","values":"feature importance"},inplace=True)
-    path = savepath+Model_code
+    path = save_path+model_code
     if  not os.path.exists(path):    
         os.makedirs(path)
     if not os.path.exists(path+"/"+"feature importances"):
@@ -655,18 +651,19 @@ predictions,indicator_importance,category_importance,performance = query_and_tra
 
 
 # In[ ]:
-
+targets = np.unique(predictions.target.values)
+datasets = np.unique(indicatorMeta[indicatorMeta["Indicator Code"].isin(targets)].Dataset.values)
 
 for d in datasets:
     print(d)
-    for y in np.unique(prediction[prediction.dataset == d].year.values):
-        replacement(d,y,savepath, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=prediction)
+    for y in np.unique(predictions[predictions.dataset == d].year.values):
+        replacement(d,y,savepath, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=predictions)
 
 
 # In[ ]:
 
 
-importance_script(savepath,importance)
+importance_script(savepath,indicator_importance)
 
 
 # In[ ]:
