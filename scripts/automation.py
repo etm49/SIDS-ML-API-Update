@@ -134,11 +134,6 @@ def processMLData():
                             json.dump(indicatorJson, outfile,cls=NpEncoder)
 
 if output_type == 'y':
-    if model_approach == "iterative":
-        p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_predictions"+".csv"
-        temp_p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_test"+"_predictions"+".csv"
-    else: 
-        processMLData()
     name = get_inputs("Model name for excel sheet")
     description = get_inputs("Model description for excel sheet")
     metadata = pd.read_excel(folder + "/ML Model Metadata.xlsx")
@@ -154,6 +149,14 @@ if output_type == 'y':
             layer[i] = np.nan
     metadata.append(layer, ignore_index = True)
     metadata.to_excel(folder + "/ML Model Metadata.xlsx")
+    if model_approach == "iterative":
+        # need different script setup
+        pass
+        #p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_predictions"+".csv"
+        #temp_p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_test"+"_predictions"+".csv"
+    else: 
+        processMLData()
+
 
 else: 
     print("convert output into a country by indicator format")
