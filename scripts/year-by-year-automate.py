@@ -76,7 +76,7 @@ percent = 90
 #Maximum number of missingess to consider in predictors (predictor threshold)
 measure = 40
 
-
+#Important paths (need to be updated)
 mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
 metadata = pd.read_excel(mlMetadata)
 
@@ -84,6 +84,12 @@ DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
 savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
 mlResults = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/"
 
+PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
+repo = Repo(PATH_OF_GIT_REPO)
+repo.remotes.origin.pull()
+
+
+#Inputs to guide modelling
 model =get_inputs("Select model name",['rfr','gbr','etr'])
 
 start_year = get_inputs("year to start from? e.g. 2010")
@@ -93,7 +99,7 @@ supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 
 def folderChecker():
     model_code = get_inputs("Input model code in format 'model1', 'model2',...")
-    if model_code in os.scandir(savepath):
+    if model_code in os.listdir(savepath):
         response = get_inputs("model code already present in the API. Would you like to update without removing content, replace existing folder or neither?", ['update','replace', 'neither'])
         if response == 'neither':
             model_code, response = folderChecker()
@@ -776,7 +782,6 @@ processMLData(large_dict)
 metadata.to_excel(mlMetadata)
 
 # Push to git
-PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year])  
 
 def git_push():
