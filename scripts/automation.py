@@ -129,7 +129,8 @@ def processMLData():
             if os.path.exists(p):
                 indicatorCodes=pd.read_csv(p).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist()
                 for indicator in indicatorCodes[:100]:
-
+                    if indicator =="year":
+                        continue
                     print(indicator)
                     if (os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') & (response == 'update')):
                         with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') as json_file:

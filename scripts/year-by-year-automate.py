@@ -689,6 +689,8 @@ def processMLData(predDictionary):
             indicatorCodes.extend(predDictionary[datasetCode][i]["prediction"].columns.tolist())
         indicatorCodes = list(set(indicatorCodes))
         for indicator in indicatorCodes:
+            if indicator =="year":
+                continue
             # If json file already exists, update that (important if running script in segments)
             if (os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') & (response == 'update')):
                 with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') as json_file:
