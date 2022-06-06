@@ -799,7 +799,7 @@ processMLData(large_dict)
 with open(mlMetadata, "w") as write_file:
     json.dump(mlMetajson, write_file, indent=4)
 # Push to git
-COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year])  
+COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
 def git_push():
     try:
