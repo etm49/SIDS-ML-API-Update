@@ -77,8 +77,11 @@ percent = 90
 measure = 40
 
 #Important paths (need to be updated)
-mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
-metadata = pd.read_excel(mlMetadata)
+#mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
+mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.json"
+#metadata = pd.read_excel(mlMetadata)
+with open(mlMetadata) as json_file:
+    mlMetajson = json.load(json_file)
 
 DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
 savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
@@ -100,7 +103,7 @@ supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 def folderChecker():
     model_code = get_inputs("Input model code in format 'model1', 'model2',...")
     if model_code in os.listdir(savepath):
-        response = get_inputs("model code already present in the API. Would you like to update without removing content, replace existing folder or neither?", ['update','replace', 'neither'])
+        response = get_inputs("model code already present in the API. Would you like to update without removing content (including model Metadata), replace existing folder (including model Metadata) or neither?", ['update','replace', 'neither'])
         if response == 'neither':
             model_code, response = folderChecker()
         return model_code, response
@@ -112,18 +115,31 @@ model_code,response = folderChecker()
 if (response in  ['replace','new']):
     name = get_inputs("Model name for excel sheet")
     description = get_inputs("Model description for excel sheet")
+    modellingApproach = "year-by-year"
+    parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
+    advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
+    drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
+    #layer = dict()
+    #for i in metadata.columns:
+    #    if i == "Model":
+    #        layer[i] = "Model " + model_code[-1]
+    #    elif i == "Model name":
+    #        layer[i] = name
+    #    elif i == "Model Description":
+    #        layer[i] = description
+    #    else:
+    #        layer[i] = np.nan
+    #metadata = metadata.append(layer, ignore_index = True)
+    
+    mlMetajson["Model " + model_code[-1]] = dict()
+    mlMetajson["Model " + model_code[-1]]["Modelling Approach"] = modellingApproach
+    mlMetajson["Model " + model_code[-1]]["Model Name"] = name
+    mlMetajson["Model " + model_code[-1]]["Parameters"] = parameters
+    mlMetajson["Model " + model_code[-1]]["Model Description"] = description
+    mlMetajson["Model " + model_code[-1]]["Model Advantage"] = advantage
+    mlMetajson["Model " + model_code[-1]]["Model Drawback"] = drawback
+    
 
-    layer = dict()
-    for i in metadata.columns:
-        if i == "Model":
-            layer[i] = "Model " + model_code[-1]
-        elif i == "Model name":
-            layer[i] = name
-        elif i == "Model Description":
-            layer[i] = description
-        else:
-            layer[i] = np.nan
-    metadata = metadata.append(layer, ignore_index = True)
 
 
 SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'COM', 'COK', 'CUB', 'CUW', 'DMA', 'DOM',
@@ -779,8 +795,9 @@ for d in datasets:
 processMLData(large_dict)
 
 #Update Metadata
-metadata.to_excel(mlMetadata)
-
+#metadata.to_excel(mlMetadata)
+with open(mlMetadata, "w") as write_file:
+    json.dump(mlMetajson, write_file, indent=4)
 # Push to git
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year])  
 
