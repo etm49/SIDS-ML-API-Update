@@ -109,7 +109,7 @@ def processMLData():
     modelCodes = model_code[-1]
     for modelCode in modelCodes:
         print(modelCode)
-        fileNames=[ f.path for f in os.scandir(mlResults+"/model"+modelCode+"/predictions") if not f.is_dir() ]
+        fileNames=[ f.path for f in os.scandir(mlResults+"model"+modelCode+"/predictions") if not f.is_dir() ]
         
         datasetCodes=[]
         years=[]
@@ -125,7 +125,7 @@ def processMLData():
                 
         for datasetCode in datasetCodes:
             print(datasetCode)
-            p = mlResults+"/model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+years[0]+".csv"
+            p = mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+years[0]+".csv"
             if os.path.exists(p):
                 indicatorCodes=pd.read_csv(p).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist()
                 for indicator in indicatorCodes[:100]:
@@ -138,11 +138,11 @@ def processMLData():
                     else: 
                         indicatorJson={"data":{},"upperIntervals":{},"lowerIntervals":{},"categoryImportances":{},"featureImportances":{}}
                     for year in years:
-                        if os.path.exists(mlResults+"/model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv"):
-                            predictionsDf=pd.read_csv(mlResults+"/model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
-                            lowerIntervalsDf=pd.read_csv(mlResults+"/model"+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
-                            upperIntervalsDf=pd.read_csv(mlResults+"/model"+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
-                            featureImportancesDf=pd.read_csv(mlResults+"/model"+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
+                        if os.path.exists(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv"):
+                            predictionsDf=pd.read_csv(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
+                            lowerIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
+                            upperIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
+                            featureImportancesDf=pd.read_csv(mlResults+"model"+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
                             
                             yearValues={}
                             upperIntervals={}
@@ -220,7 +220,7 @@ if output_type == 'y':
         processMLData()
         with open(mlMetadata, "w") as write_file:
             json.dump(mlMetajson, write_file, indent=4)
-        COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year])  
+        COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
         def git_push():
             try:
