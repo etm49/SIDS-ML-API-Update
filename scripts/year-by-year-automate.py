@@ -29,26 +29,28 @@ from sklearn.model_selection import GridSearchCV, cross_val_predict
 from pca import pca
 from tqdm import tqdm
 
-
+from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push
+from enums import Model, Interval, Interpolator, Schema
 
 ######################################################################################################
 
-def get_inputs(text: str, expect: [str] = None, default=None):
-    ret = None
-    while ret is None or ret == "":
-        if expect is None:
-            ret = input(text + " : ")
-        else:
-            while ret not in expect:
-                ret = input(text + " " + str(expect) + " : ")
+#def get_inputs(text: str, expect: [str] = None, default=None):
+#    ret = None
+#    while ret is None or ret == "":
+#        if expect is None:
+#            ret = input(text + " : ")
+#        else:
+#            while ret not in expect:
+#                ret = input(text + " " + str(expect) + " : ")
+#
+#        if default is not None and ret is None or ret == "":
+#            ret = default
+#            break
 
-        if default is not None and ret is None or ret == "":
-            ret = default
-            break
-
-    if ret is None:
-        return default
-    return ret
+#    if ret is None:
+#        return default
+#    return ret
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -78,18 +80,18 @@ measure = 40
 
 #Important paths (need to be updated)
 #mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
-mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
+#mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
 #metadata = pd.read_excel(mlMetadata)
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
 
-DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
-savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
-mlResults = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/"
+#DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
+#savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
+#mlResults = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/"
 
-PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
+#PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
 repo = Repo(PATH_OF_GIT_REPO)
-repo.remotes.origin.pull()
+#repo.remotes.origin.pull()
 
 
 #Inputs to guide modelling
@@ -100,25 +102,15 @@ end_year = get_inputs("year to end at? e.g. 2019")
 
 supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 
-def folderChecker():
-    model_code = get_inputs("Input model code in format 'model1', 'model2',...")
-    if model_code in os.listdir(savepath):
-        response = get_inputs("model code already present in the API. Would you like to update without removing content (including model Metadata), replace existing folder (including model Metadata) or neither?", ['update','replace', 'neither'])
-        if response == 'neither':
-            model_code, response = folderChecker()
-        return model_code, response
-    else:
-        response='new'
-        return model_code, response
-
 model_code,response = folderChecker()
 if (response in  ['replace','new']):
-    name = get_inputs("Model name for excel sheet")
-    description = get_inputs("Model description for excel sheet")
-    modellingApproach = "year-by-year"
-    parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
-    advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
-    drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
+    mlMetajson = metaUpdater(mlMetajson, model_code)
+#    name = get_inputs("Model name for excel sheet")
+#    description = get_inputs("Model description for excel sheet")
+#    modellingApproach = "year-by-year"
+#    parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
+#    advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
+#    drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
     #layer = dict()
     #for i in metadata.columns:
     #    if i == "Model":
@@ -131,22 +123,22 @@ if (response in  ['replace','new']):
     #        layer[i] = np.nan
     #metadata = metadata.append(layer, ignore_index = True)
     
-    mlMetajson["Model " + model_code[-1]] = dict()
-    mlMetajson["Model " + model_code[-1]]["Modelling Approach"] = modellingApproach
-    mlMetajson["Model " + model_code[-1]]["Model Name"] = name
-    mlMetajson["Model " + model_code[-1]]["Parameters"] = parameters
-    mlMetajson["Model " + model_code[-1]]["Model Description"] = description
-    mlMetajson["Model " + model_code[-1]]["Model Advantage"] = advantage
-    mlMetajson["Model " + model_code[-1]]["Model Drawback"] = drawback
+#    mlMetajson["Model " + model_code[-1]] = dict()
+#    mlMetajson["Model " + model_code[-1]]["Modelling Approach"] = modellingApproach
+#    mlMetajson["Model " + model_code[-1]]["Model Name"] = name
+#    mlMetajson["Model " + model_code[-1]]["Parameters"] = parameters
+#    mlMetajson["Model " + model_code[-1]]["Model Description"] = description
+#    mlMetajson["Model " + model_code[-1]]["Model Advantage"] = advantage
+#    mlMetajson["Model " + model_code[-1]]["Model Drawback"] = drawback
     
 
 
 
-SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'COM', 'COK', 'CUB', 'CUW', 'DMA', 'DOM',
-        'FJI', 'PYF',
-        'GRD', 'GUM', 'GNB', 'GUY', 'HTI', 'JAM', 'KIR', 'MDV', 'MHL', 'MUS', 'FSM', 'MSR', 'NRU', 'NCL', 'NIU', 'MNP',
-        'PLW', 'PNG', 'PRI',
-        'KNA', 'LCA', 'VCT', 'WSM', 'STP', 'SYC', 'SGP', 'SXM', 'SLB', 'SUR', 'TLS', 'TON', 'TTO', 'TUV', 'VIR', 'VUT']
+#SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'COM', 'COK', 'CUB', 'CUW', 'DMA', 'DOM',
+#        'FJI', 'PYF',
+#        'GRD', 'GUM', 'GNB', 'GUY', 'HTI', 'JAM', 'KIR', 'MDV', 'MHL', 'MUS', 'FSM', 'MSR', 'NRU', 'NCL', 'NIU', 'MNP',
+#        'PLW', 'PNG', 'PRI',
+#        'KNA', 'LCA', 'VCT', 'WSM', 'STP', 'SYC', 'SGP', 'SXM', 'SLB', 'SUR', 'TLS', 'TON', 'TTO', 'TUV', 'VIR', 'VUT']
 
 ######################################################################################################
 
@@ -158,69 +150,6 @@ SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'C
 ########## All functions for Two Level imputation model #########
 
 # Import from disk
-def cou_ind_miss(Data):
-    """
-        Returns the amount of missingness across the years in each indicator-country pair 
-    """
-    absolute_missing = Data.drop(columns=["Country Code","Indicator Code"]).isnull().sum(axis=1)
-    total = Data.drop(columns=["Country Code","Indicator Code"]).count(axis=1)
-
-    percent_missing = absolute_missing * 100 / Data.drop(columns=["Country Code","Indicator Code"]).shape[1]
-    missing_value_df = pd.DataFrame({'row_name': Data["Country Code"]+"-"+Data["Indicator Code"],
-                                 'Indicator Code':Data["Indicator Code"],
-                                 'absolute_missing':absolute_missing,
-                                 'total':total,
-                                 'percent_missing': percent_missing})
-    countyIndicator_missingness = missing_value_df.sort_values(["percent_missing","row_name"])
-
-    return countyIndicator_missingness
-
-def data_importer(percent=90,model_type="non-series",path = DATASETS_PATH):
-    """
-        
-        Import csv files and restrructure the data into a country by indcator format. Model_type will be expanded upon.
-        precent: the most tolerable amount of missingness in a column for an indicator  accross the years
-        model_type: type of model data imported for
-        path: path on disk the raw data is stored
-        
-        wb_data: indicatorData restructed to a (country x year) by Indicator Code format
-        indicatorMeta: indicator meta dataset (as is)
-        indicatorData: indicator data dataset (as is)
-        datasetMeta: dataset meta data (as is)
-    """
-    #
-
-
-    indicatorMeta = pd.read_csv(path + "indicatorMeta.csv")
-
-    datasetMeta = pd.read_csv(path + "datasetMeta.csv")
-
-    indicatorData = pd.read_csv(path + "indicatorData.csv")
-
-
-    #### Remove rows with missing country or indicator names
-    indicatorData["Country/Indicator Code"] = indicatorData["Country Code"]+"-"+indicatorData["Indicator Code"]
-    indicatorData= indicatorData[indicatorData["Country/Indicator Code"].notna()].drop(columns="Country/Indicator Code")
-
-    if model_type == "series":
-        # Indicators measured less than 5 times for each country are removed
-        countyIndicator_missingness = cou_ind_miss(indicatorData)
-        indicator_subset = set(countyIndicator_missingness[countyIndicator_missingness.percent_missing >= percent]["Indicator Code"])- set(countyIndicator_missingness[countyIndicator_missingness.percent_missing<percent]["Indicator Code"])
-
-        indicatorData=indicatorData[~indicatorData["Indicator Code"].isin(indicator_subset)]
-
-    wb_data = indicatorData.set_index(['Country Code', 'Indicator Code'])
-    wb_data = wb_data.stack()
-    wb_data = wb_data.unstack(['Indicator Code'])
-    wb_data = wb_data.sort_index()
-
-    indicatorMeta=indicatorMeta[indicatorMeta["Indicator Code"].isin(indicatorData["Indicator Code"].values)]
-    indicatorMeta=indicatorMeta[indicatorMeta.Indicator.notna()]
-
-    datasetMeta=datasetMeta[datasetMeta["Dataset Code"].isin(indicatorMeta["Dataset"].values)]
-    datasetMeta=datasetMeta[datasetMeta["Dataset Name"].notna()]
-
-    return wb_data,indicatorMeta, datasetMeta, indicatorData
 
 ######################################################################################################
 # Preprocess
@@ -271,7 +200,7 @@ def preprocessing(data,target, target_year,interpolator,SIDS, percent=measure):
     X_test = X_test[most_complete]
     
     # How muc does fiting only on X_train affect fits (perhaps another layer of performance via CV)
-    if interpolator == 'KNNImputer':
+    if interpolator == Interpolator.KNNImputer.name:
         scaler = MinMaxScaler()
         imputer = KNNImputer(n_neighbors=5) #Hard Coded
         scaler.fit(X_train)
@@ -286,7 +215,7 @@ def preprocessing(data,target, target_year,interpolator,SIDS, percent=measure):
                       index=X_test.index)
 
 
-    elif interpolator == 'SimpleImputer':
+    elif interpolator == Interpolator.SimpleImputer.name:
         imp_mean = SimpleImputer(missing_values=np.nan, strategy='mean') #Hard coded
         imp_mean.fit(X_train)
         X_train = pd.DataFrame(data=imp_mean.transform(X_train)
@@ -340,12 +269,12 @@ def feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme, m
         X_test: reduced testing data
     """
 
-    if scheme == "Automatic via feature selection":
+    if scheme == Schema.AFS.name:
         
         # Take the most import predictor_number number of independent variables (via RFE) and plot correlation
         importance_boolean = feature_selector(X_train=X_train,y_train=y_train,manual_predictors=manual_predictors)
         prediction_features = (X_train.columns[importance_boolean].tolist())
-    if scheme == "PCA":
+    if scheme == Schema.PCA.name:
         PCA =pca()
         
         out = PCA.fit_transform(X_train)
@@ -370,129 +299,7 @@ def feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme, m
 ######################################################################################################
 
 # Train model and predict
-def model_trainer(X_train,X_test,y_train,seed,n_estimators, model,interval):
-    """
-    Train the selected model, cross validate, score and generate a 90% prediction interval based on bootstrapped residuals.
-    Args:
-        X_train: training data
-        X_test: prediction data
-        y_train: training target array
-        seed: random state setter
-        n_estimators: number of trees for tree based models
-        model: type of model to be trained
-        interval: type of prediction interval
-    Returns:
-        prediction: dataframe with prediction values and confidence interval
-        rmse: root mean squared error of the model
-        gs: trained GridSearchCV model
-        best_model: the best model
-    """
-    sample_weight = []#X_train.pop("sample_weight")
-    sids_weights = (X_train.index.isin(SIDS)).sum()
-    total = X_train.shape[0]
 
-    # Inverse class weighting for SIDS and non-SIDS
-    for i in X_train.index:
-        if i in SIDS:
-            sample_weight.append(1/sids_weights)
-        else:
-            sample_weight.append(1/(total-sids_weights))
-
-
-    if model == "all":
-        model = ["rfr","etr","gbr","svr"]
-    model_instances=[]
-    params= []
-
-    num_folds = 5 # Hard coded
-    #scoring = ['neg_root_mean_squared_error','neg_median_absolute_error','explained_variance']
-    scoring = 'neg_mean_squared_error'
-    if "rfr" in  model:
-        clf1 = RandomForestRegressor(random_state = seed, n_jobs=-1)
-        param1 = {}
-        param1['regressor__n_estimators'] = [500]#[n_estimators]
-        param1['regressor__max_depth'] = [5, 10, 20,100, None] # Hard coded
-        param1['regressor'] = [clf1]
-        model_instances.append(clf1)
-        params.append(param1)
-    if "etr" in model:
-        clf2 = ExtraTreesRegressor(random_state = seed, n_jobs=-1)
-        param2 = {}
-        param2['regressor__n_estimators'] = [500]#[n_estimators]
-        param2['regressor__max_depth'] = [5, 10, 20,100, None]# Hard coded
-        param2['regressor'] = [clf2]
-        model_instances.append(clf2)
-        params.append(param2)
-
-    if "gbr" in model:
-        clf3 = GradientBoostingRegressor(random_state = seed)
-        param3 = {}
-        if interval == "quantile":
-            param3['regressor__loss'] = ['quantile']
-            param3['regressor__alpha'] = [0.5] # hard coded
-        param3['regressor__n_estimators'] = [100]#[n_estimators]
-        param3['regressor__max_depth'] = [3,5, 10, 20, None]# Hard coded
-        param3['regressor'] = [clf3]
-        model_instances.append(clf3)
-        params.append(param3)
-    pipeline = Pipeline([('regressor', model_instances[0])])
-
-    kwargs = {pipeline.steps[-1][0] + '__sample_weight': sample_weight}
-
-
-    gs = GridSearchCV(pipeline, params, cv=num_folds, n_jobs=-1, scoring=scoring, refit=True, verbose=1).fit(X_train, y_train,**kwargs)
-    rmse = np.sqrt(-gs.best_score_)
-
-    best_model = gs.best_estimator_["regressor"]
-
-    prediction = pd.DataFrame(gs.predict(X_test), columns=["prediction"], index=X_test.index)
-
-
-    if interval == "bootstrap":
-
-        #Residual Bootsrapping  on validation data
-        pred_train = cross_val_predict(best_model,X_train, y_train, cv=3)
-
-        res = y_train - pred_train
-
-        ### BOOTSTRAPPED INTERVALS ###
-
-        alpha = 0.1 #(90% prediction interval) #Hard Coded
-
-        bootstrap = np.asarray([np.random.choice(res, size=res.shape) for _ in range(100)])
-        q_bootstrap = np.quantile(bootstrap, q=[alpha/2, 1-alpha/2], axis=0)
-
-        #prediction = pd.DataFrame(gs.predict(X_test), columns=["prediction"], index=X_test.index)
-        prediction["upper"]= prediction["prediction"] + q_bootstrap[1].mean()
-        prediction["lower"]= prediction["prediction"] + q_bootstrap[0].mean()
-
-    else:
-        if str(type(best_model))== "<class 'sklearn.ensemble._gb.GradientBoostingRegressor'>":
-            all_models = {}
-            for alpha in [0.05, 0.95]: # Hard Coded
-                gbr = GradientBoostingRegressor(loss="quantile", alpha=alpha,max_depth=gs.best_params_['regressor__max_depth'],n_estimators=gs.best_params_['regressor__n_estimators'])
-                all_models["q %1.2f" % alpha] = gbr.fit(X_train, y_train)
-                #For prediction
-
-            prediction["lower"]= all_models["q 0.05"].predict(X_test)
-            prediction["upper"]= all_models["q 0.95"].predict(X_test)
-        else:
-            pred_Q = pd.DataFrame()
-            for pred in best_model.estimators_:
-                temp = pd.Series(pred.predict(X_test))
-                pred_Q = pd.concat([pred_Q,temp],axis=1)
-            quantiles = [0.05, 0.95] # Hard Coded
-
-            for q in quantiles:
-                s = pred_Q.quantile(q=q, axis=1)
-                prediction[str(q)] = s.values
-            prediction.rename(columns={"0.05":"lower","0.95":"upper"}, inplace=True) # Column names are hard coded
-
-    # Predict for SIDS countries with missing values
-    prediction = prediction[prediction.index.isin(SIDS)]
-    prediction = prediction.reset_index().rename(columns={"index":"country"})
-
-    return prediction,rmse,gs, best_model
 
 
 # In[5]:
@@ -561,7 +368,10 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             percent=measure
 
             # training and prediction for X_test
-            prediction,rmse,gs, best_model = model_trainer(X_train,X_test,y_train,seed,estimators, model,interval)
+            #prediction,rmse,gs, best_model = model_trainer(X_train,X_test,y_train,seed,estimators, model,interval)
+            prediction,rmse,gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight = None)
+            prediction = prediction[prediction.index.isin(SIDS)]
+            prediction = prediction.reset_index().rename(columns={"index":"country"})       
             #feature_importance_bar = dict()
 
             t1 = time.time()
@@ -803,14 +613,5 @@ with open(mlMetadata, "w") as write_file:
 # Push to git
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
-def git_push():
-    try:
-        repo = Repo(PATH_OF_GIT_REPO)
-        repo.git.add(all=True)
-        repo.index.commit(COMMIT_MESSAGE)
-        origin = repo.remote(name='origin')
-        origin.push()
-    except:
-        print('Some error occured while pushing the code')    
 
-git_push()
+#git_push(COMMIT_MESSAGE)
