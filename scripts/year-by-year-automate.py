@@ -615,12 +615,12 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             prediction["model"] = k
             prediction.set_index(["model","year","target"])
             predictions=pd.concat([predictions,prediction])
-    if not os.path.exists(mlResults+ model_code):
-        os.makedirs(mlResults+ model_code)
-    predictions.to_csv(mlResults + model_code + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv")
-    indicator_importance.to_csv(mlResults + model_code + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv")
-    category_importance.to_csv(mlResults + model_code + "/"+start_year+"_"+end_year+"_"+model+"_category_importance.csv")
-    performance.to_csv(mlResults + model_code + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv")
+    if not os.path.exists(mlResults+ model_code + "/raw data from model"):
+        os.makedirs(mlResults+ model_code+ "/raw data from model")
+    predictions.to_csv(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv")
+    indicator_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv")
+    category_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_category_importance.csv")
+    performance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv")
     return predictions,indicator_importance.reset_index(),category_importance,performance
 
 
