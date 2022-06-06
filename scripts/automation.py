@@ -4,7 +4,7 @@ import json
 import numpy as np
 from git import Repo
 
-mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.json"
+mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
 

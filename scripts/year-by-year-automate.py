@@ -78,7 +78,7 @@ measure = 40
 
 #Important paths (need to be updated)
 #mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
-mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.json"
+mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
 #metadata = pd.read_excel(mlMetadata)
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
