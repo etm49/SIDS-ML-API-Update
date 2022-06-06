@@ -54,7 +54,6 @@ model_approach = get_inputs("Please enter modelling approach", ["year-by-year","
 start_year = get_inputs("year to start from? e.g. 2010")
 end_year = get_inputs("year to end at? e.g. 2019")
 
-model_code = get_inputs("Please enter model code in mlResults (format of model1, model2,...)")
 
 output_type = get_inputs("Are model outputs in a country by indicator matrix format", ['y','n'])
 
@@ -140,10 +139,10 @@ def processMLData():
                         indicatorJson={"data":{},"upperIntervals":{},"lowerIntervals":{},"categoryImportances":{},"featureImportances":{}}
                     for year in years:
                         if os.path.exists(mlResults+"/model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv"):
-                            predictionsDf=pd.read_csv("../mlResults/Model "+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
-                            lowerIntervalsDf=pd.read_csv("../mlResults/Model "+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
-                            upperIntervalsDf=pd.read_csv("../mlResults/Model "+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
-                            featureImportancesDf=pd.read_csv("../mlResults/Model "+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
+                            predictionsDf=pd.read_csv(mlResults+"/model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
+                            lowerIntervalsDf=pd.read_csv(mlResults+"/model"+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
+                            upperIntervalsDf=pd.read_csv(mlResults+"/model"+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
+                            featureImportancesDf=pd.read_csv(mlResults+"/model"+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
                             
                             yearValues={}
                             upperIntervals={}
