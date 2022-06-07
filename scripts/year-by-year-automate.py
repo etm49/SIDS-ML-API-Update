@@ -363,7 +363,7 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             estimators=100
             k=model # delete when looping
             interval="quantile"
-            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name]:
+            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name, Model.cat.name]:
                 interval = "bootstrap"
             SIDS=SIDS
             seed=seed
