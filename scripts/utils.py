@@ -227,7 +227,7 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
         params.append(param6)
 
     if Model.xgbr.name in model_list:
-        clf7 = XGBRegressor(random_state=seed,importance_type='weight')
+        clf7 = XGBRegressor(random_state=seed,importance_type='gain')
         param7 = {}
         param7['regressor__n_estimators'] = [n_estimators]
         param7['regressor__max_depth'] = [5, 10, 20, 100, None]  # Hard coded
