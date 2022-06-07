@@ -30,5 +30,13 @@
         "Model Description": "Support Vector Machines are powerful tools, but their compute and storage requirements increase rapidly with the number of training vectors. The core of an SVM is a quadratic programming problem (QP), separating support vectors from the rest of the training data.  The basic idea behind SVR is to find the best fit line. In SVR, the best fit line is the hyperplane that has the maximum number of points.  Linear Kernel is used when the data is assumed to be Linearly separable, that is, it can be separated using a single Line. ",
         "Model Advantage": "assumption of linearity allows for assigning feature importance, robust to outliers",
         "Model Drawback": "violation of linearity assumption and lack of scalability"
+    },
+    "Model 6": {
+        "Modelling Approach": "year-by-year",
+        "Model Name": "XGBoost Regressor",
+        "Parameters": "later",
+        "Model Description": "later",
+        "Model Advantage": "later",
+        "Model Drawback": "later"
     }
 }
