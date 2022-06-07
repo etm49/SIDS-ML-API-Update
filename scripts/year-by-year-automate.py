@@ -95,7 +95,7 @@ repo = Repo(PATH_OF_GIT_REPO)
 
 
 #Inputs to guide modelling
-model =get_inputs("Select model name",['rfr','gbr','etr'])
+model =get_inputs("Select model name",[e.name for e in Model if e != Model.all])
 
 start_year = get_inputs("year to start from? e.g. 2010")
 end_year = get_inputs("year to end at? e.g. 2019")
@@ -378,9 +378,13 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             #timer
             train_time = t1 - t0  
             #print("feature_importance_bar")
+            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr]:
+                feature_importances = best_model.coef_
+            else:
+                feature_importances = best_model.feature_importances_
             feature_importance_bar = pd.DataFrame()
             feature_importance_bar["names"] = best_model.feature_names_in_.tolist()
-            feature_importance_bar["values"] = best_model.feature_importances_.tolist()
+            feature_importance_bar["values"] = feature_importances.tolist()#best_model.feature_importances_.tolist()
             feature_importance_bar["year"] = i
             feature_importance_bar["target"] = j
             feature_importance_bar["model"] = k
@@ -388,7 +392,7 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             indicator_importance=pd.concat([indicator_importance,feature_importance_bar])
             # Make dataframes of feature importances for bar and pie visuals
             features = indicatorMeta[indicatorMeta["Indicator Code"].isin(X_train.columns)]
-            feature_importance_pie =pd.DataFrame(data={"category":features.Category.values,"values":gs.best_estimator_._final_estimator.feature_importances_}).groupby("category").sum().reset_index()#.to_dict(orient="list")
+            feature_importance_pie =pd.DataFrame(data={"category":features.Category.values,"values":feature_importances}).groupby("category").sum().reset_index()#.to_dict(orient="list")
             #print("feature_importance_pie")
             feature_importance_pie["year"] = i
             feature_importance_pie["target"] = j
