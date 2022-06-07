@@ -22,5 +22,13 @@
         "Model Description": "Stochastic Gradient Descent (SGD) is a simple yet very efficient approach to fitting linear classifiers and regressors under convex loss functions. SGD is merely an optimization technique and does not correspond to a specific family of machine learning models. For instance SGDRegressor(loss='squared_error', penalty='l2') and linear least squares with l2 regularization solve the same optimization problem, via different means.",
         "Model Advantage": "Efficiency, Ease of implementation",
         "Model Drawback": "SGD requires a number of hyperparameters such as the regularization parameter and the number of iterations, SGD is sensitive to feature scaling"
+    },
+    "Model 5": {
+        "Modelling Approach": "year-by-year",
+        "Model Name": "Linear Support Vector Regressor",
+        "Parameters": "type of regularization, strength of regularization",
+        "Model Description": "Support Vector Machines are powerful tools, but their compute and storage requirements increase rapidly with the number of training vectors. The core of an SVM is a quadratic programming problem (QP), separating support vectors from the rest of the training data.  The basic idea behind SVR is to find the best fit line. In SVR, the best fit line is the hyperplane that has the maximum number of points.  Linear Kernel is used when the data is assumed to be Linearly separable, that is, it can be separated using a single Line. ",
+        "Model Advantage": "assumption of linearity allows for assigning feature importance, robust to outliers",
+        "Model Drawback": "violation of linearity assumption and lack of scalability"
     }
 }
