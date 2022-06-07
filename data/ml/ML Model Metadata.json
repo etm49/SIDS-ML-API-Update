@@ -14,5 +14,13 @@
         "Model Description": "builds an additive model in a forward stage-wise fashion. In each stage a regression tree is fit on the negative gradient of the given loss function. Run on a year-by-year basis",
         "Model Advantage": "Higher point estimation accuracy",
         "Model Drawback": "Overfitting especially when there is noisy data"
+    },
+    "Model 4": {
+        "Modelling Approach": "year-by-year",
+        "Model Name": "Stochastic Gradient Descent Regressor",
+        "Parameters": "type of regularization, strength of regularization",
+        "Model Description": "Stochastic Gradient Descent (SGD) is a simple yet very efficient approach to fitting linear classifiers and regressors under convex loss functions. SGD is merely an optimization technique and does not correspond to a specific family of machine learning models. For instance SGDRegressor(loss='squared_error', penalty='l2') and linear least squares with l2 regularization solve the same optimization problem, via different means.",
+        "Model Advantage": "Efficiency, Ease of implementation",
+        "Model Drawback": "SGD requires a number of hyperparameters such as the regularization parameter and the number of iterations, SGD is sensitive to feature scaling"
     }
 }
