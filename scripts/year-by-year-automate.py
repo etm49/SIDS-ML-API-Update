@@ -363,7 +363,7 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             estimators=100
             k=model # delete when looping
             interval="quantile"
-            if model in [Model.sdg.name]:
+            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name]:
                 interval = "bootstrap"
             SIDS=SIDS
             seed=seed
@@ -380,7 +380,7 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             #timer
             train_time = t1 - t0  
             #print("feature_importance_bar")
-            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr]:
+            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name]:
                 feature_importances = best_model.coef_
             else:
                 feature_importances = best_model.feature_importances_

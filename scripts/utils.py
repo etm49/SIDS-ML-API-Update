@@ -12,7 +12,7 @@ from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor, Gradien
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import GridSearchCV,cross_val_predict
 
-from sklearn.svm import SVR, NuSVR
+from sklearn.svm import SVR, NuSVR,LinearSVR
 from sklearn.linear_model import SGDRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
@@ -253,6 +253,14 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
         param9['regressor'] = [clf9]
         model_instances.append(clf9)
         params.append(param9)
+    if Model.lsvr.name in model_list:
+        clf10 = LinearSVR(random_state=seed)
+        param10 = {}
+        param10['regressor__loss'] = ['epsilon_insensitive', 'squared_epsilon_insensitive']
+        param10['regressor__C'] = [0.2, 0.5, 1, 1.5]  # Hard coded
+        param10['regressor'] = [clf10]
+        model_instances.append(clf10)
+        params.append(param10)
 
 
     pipeline = Pipeline([('regressor', model_instances[0])])

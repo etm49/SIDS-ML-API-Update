@@ -24,6 +24,7 @@ class Model(Enum):
     etr='Extra tree Regressor'
     esvr="Epsilon-Support Vector Regressor"
     nusvr="Nu Support Vector Regressor"
+    lsvr = "Linear Support Vector Regressor"
     sdg="SGD Regressor"
     xgbr = "XGBoost Regressor"
     lgbmr ="LGBM Regressor"
