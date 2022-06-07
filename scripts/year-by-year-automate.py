@@ -363,6 +363,8 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
             estimators=100
             k=model # delete when looping
             interval="quantile"
+            if model in [Model.sdg.name]:
+                interval = "bootstrap"
             SIDS=SIDS
             seed=seed
             percent=measure
@@ -618,4 +620,4 @@ with open(mlMetadata, "w") as write_file:
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
 
-#git_push(COMMIT_MESSAGE)
+git_push(COMMIT_MESSAGE)
