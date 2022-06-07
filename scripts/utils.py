@@ -202,8 +202,8 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
     if Model.esvr.name in model_list:
         clf4 = SVR(kernel='linear')
         param4 = {}
-        #param4['degree'] = [2,3,4]
-        #param4['C'] = [1, 2, 3]  # Hard coded
+        param4['regressor__degree'] = [2,3,4]
+        param4['regressor__C'] = [1, 2, 3]  # Hard coded
         param4['regressor'] = [clf4]
         model_instances.append(clf4)
         params.append(param4)
@@ -211,8 +211,8 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
     if Model.nusvr.name in model_list:
         clf5 = NuSVR(kernel='linear')
         param5 = {}
-        #param5['degree'] = [2,3,4]
-        #param5['C'] = [1, 2, 3]  # Hard coded
+        param5['regressor__degree'] = [2,3,4]
+        param5['regressor__C'] = [1, 2, 3]  # Hard coded
         param5['regressor'] = [clf5]
         model_instances.append(clf5)
         params.append(param5)
@@ -220,8 +220,8 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
     if Model.sdg.name in model_list:
         clf6 = SGDRegressor()
         param6 = {}
-        param6['penalty'] =['l2', 'l1', 'elasticnet']
-        #param6['alpha'] = [0.0001,0.001,0.01,0.1]
+        param6['regressor__penalty'] =['l2', 'l1', 'elasticnet']
+        param6['regressor__alpha'] = [0.0001,0.001,0.01,0.1]
         param6['regressor'] = [clf6]
         model_instances.append(clf6)
         params.append(param6)
