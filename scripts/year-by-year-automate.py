@@ -330,8 +330,12 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
                 feature_importances = best_model.coef_
             else:
                 feature_importances = best_model.feature_importances_
+            try: 
+                feature_names = best_model.feature_names_in_.tolist()
+            except:
+                feature_names = best_model.feature_name_
             feature_importance_bar = pd.DataFrame()
-            feature_importance_bar["names"] = best_model.feature_names_in_.tolist()
+            feature_importance_bar["names"] = feature_names
             feature_importance_bar["values"] = feature_importances.tolist()#best_model.feature_importances_.tolist()
             feature_importance_bar["year"] = i
             feature_importance_bar["target"] = j

@@ -229,16 +229,16 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
     if Model.xgbr.name in model_list:
         clf7 = XGBRegressor(random_state=seed,importance_type='gain')
         param7 = {}
-        param7['regressor__n_estimators'] = [n_estimators]
+        param7['regressor__n_estimators'] = [100,500,1000]
         param7['regressor__max_depth'] = [5, 10, 20, 100, None]  # Hard coded
 
         param7['regressor'] = [clf7]
         model_instances.append(clf7)
         params.append(param7)
     if Model.lgbmr.name in model_list:
-        clf8 = LGBMRegressor(random_state=seed)
+        clf8 = LGBMRegressor(random_state=seed, importance_type = 'gain')
         param8 = {}
-        param8['regressor__n_estimators'] = [n_estimators]
+        param8['regressor__n_estimators'] = [100,500,1000]
         param8['regressor__max_depth'] = [5, 10, 20, 100, None]  # Hard coded
 
         param8['regressor'] = [clf8]
