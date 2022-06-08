@@ -4,38 +4,17 @@ import json
 import numpy as np
 from git import Repo
 
-mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
+from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push
+
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
 
-DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
-
-savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
-mlResults = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/"
 
 
 
-PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
 repo = Repo(PATH_OF_GIT_REPO)
 repo.remotes.origin.pull()
-
-
-def get_inputs(text: [str], expect: [str] = None, default=None):
-    ret = None
-    while ret is None or ret == "":
-        if expect is None:
-            ret = input(text + " : ")
-        else:
-            while ret not in expect:
-                ret = input(text + " " + str(expect) + " : ")
-
-        if default is not None and ret is None or ret == "":
-            ret = default
-            break
-
-    if ret is None:
-        return default
-    return ret
 
 
 
@@ -58,44 +37,9 @@ end_year = get_inputs("year to end at? e.g. 2019")
 output_type = get_inputs("Are model outputs in a country by indicator matrix format", ['y','n'])
 
 
-def folderChecker():
-    model_code = get_inputs("Input model code in format 'model1', 'model2',...")
-    if model_code in os.listdir(savepath):
-        response = get_inputs("model code already present in the API. Would you like to update without removing content (including model Metadata), replace existing folder (including model Metadata) or neither?", ['update','replace', 'neither'])
-        if response == 'neither':
-            model_code, response = folderChecker()
-        return model_code, response
-    else:
-        response='new'
-        return model_code, response
-
 model_code,response = folderChecker()
 if (response in  ['replace','new']):
-    name = get_inputs("Model name for excel sheet")
-    description = get_inputs("Model description for excel sheet")
-    modellingApproach = "year-by-year"
-    parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
-    advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
-    drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
-    #layer = dict()
-    #for i in metadata.columns:
-    #    if i == "Model":
-    #        layer[i] = "Model " + model_code[-1]
-    #    elif i == "Model name":
-    #        layer[i] = name
-    #    elif i == "Model Description":
-    #        layer[i] = description
-    #    else:
-    #        layer[i] = np.nan
-    #metadata = metadata.append(layer, ignore_index = True)
-    
-    mlMetajson["Model " + model_code[-1]] = dict()
-    mlMetajson["Model " + model_code[-1]]["Modelling Approach"] = modellingApproach
-    mlMetajson["Model " + model_code[-1]]["Model Name"] = name
-    mlMetajson["Model " + model_code[-1]]["Parameters"] = parameters
-    mlMetajson["Model " + model_code[-1]]["Model Description"] = description
-    mlMetajson["Model " + model_code[-1]]["Model Advantage"] = advantage
-    mlMetajson["Model " + model_code[-1]]["Model Drawback"] = drawback
+    mlMetajson = metaUpdater(mlMetajson, model_code)
     
 
 
@@ -197,21 +141,7 @@ def processMLData():
 
 
 if output_type == 'y':
-    #name = get_inputs("Model name for excel sheet")
-    #description = get_inputs("Model description for excel sheet")
-    #metadata = pd.read_excel(mlResults + "/ML Model Metadata.xlsx")
-    #layer = dict()
-    #for i in metadata.columns:
-    #    if i == "Model":
-    #        layer[i] = model_code
-    #    elif i == "Model name":
-    #        layer[i] = name
-    #    elif i == "Model Description":
-    #        layer[i] = description
-    #    else:
-    #        layer[i] = np.nan
-    #metadata.append(layer, ignore_index = True)
-    #metadata.to_excel(mlResults + "/ML Model Metadata.xlsx")
+
     if model_approach == "iterative":
         # need different script setup
         print("automation currently not implemented")
@@ -223,24 +153,12 @@ if output_type == 'y':
             json.dump(mlMetajson, write_file, indent=4)
         COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
-        def git_push():
-            try:
-                repo = Repo(PATH_OF_GIT_REPO)
-                repo.git.add(all=True)
-                repo.index.commit(COMMIT_MESSAGE)
-                origin = repo.remote(name='origin')
-                origin.push()
-            except:
-                print('Some error occured while pushing the code')    
-
         git_push()
 
 else: 
     print("convert output into a country by indicator format")
 
 
-
-#PATH_OF_GIT_REPO = "../api" # make sure .git folder is properly configured
 
 
 
