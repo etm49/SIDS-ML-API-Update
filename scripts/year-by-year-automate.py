@@ -35,22 +35,6 @@ from enums import Model, Interval, Interpolator, Schema
 
 ######################################################################################################
 
-#def get_inputs(text: str, expect: [str] = None, default=None):
-#    ret = None
-#    while ret is None or ret == "":
-#        if expect is None:
-#            ret = input(text + " : ")
-#        else:
-#            while ret not in expect:
-#                ret = input(text + " " + str(expect) + " : ")
-#
-#        if default is not None and ret is None or ret == "":
-#            ret = default
-#            break
-
-#    if ret is None:
-#        return default
-#    return ret
 class NpEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -78,20 +62,14 @@ percent = 90
 #Maximum number of missingess to consider in predictors (predictor threshold)
 measure = 40
 
-#Important paths (need to be updated)
-#mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/ML Model Metadata.xlsx"
-#mlMetadata = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/ML Model Metadata.json"
-#metadata = pd.read_excel(mlMetadata)
+#Important metadata
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
 
-#DATASETS_PATH = "/Volumes/My Passport for Mac/jobs/UNDP/ML-IndicatorData/"
-#savepath = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/data/ml/"
-#mlResults = "/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate/mlResults/"
 
-#PATH_OF_GIT_REPO ="/Volumes/My Passport for Mac/jobs/UNDP/ML Interface/automate test/Automate"# "../api" # make sure .git folder is properly configured
+# pull updated info from repo
 repo = Repo(PATH_OF_GIT_REPO)
-#repo.remotes.origin.pull()
+repo.remotes.origin.pull()
 
 
 #Inputs to guide modelling
@@ -105,40 +83,8 @@ supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 model_code,response = folderChecker()
 if (response in  ['replace','new']):
     mlMetajson = metaUpdater(mlMetajson, model_code)
-#    name = get_inputs("Model name for excel sheet")
-#    description = get_inputs("Model description for excel sheet")
-#    modellingApproach = "year-by-year"
-#    parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
-#    advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
-#    drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
-    #layer = dict()
-    #for i in metadata.columns:
-    #    if i == "Model":
-    #        layer[i] = "Model " + model_code[-1]
-    #    elif i == "Model name":
-    #        layer[i] = name
-    #    elif i == "Model Description":
-    #        layer[i] = description
-    #    else:
-    #        layer[i] = np.nan
-    #metadata = metadata.append(layer, ignore_index = True)
+
     
-#    mlMetajson["Model " + model_code[-1]] = dict()
-#    mlMetajson["Model " + model_code[-1]]["Modelling Approach"] = modellingApproach
-#    mlMetajson["Model " + model_code[-1]]["Model Name"] = name
-#    mlMetajson["Model " + model_code[-1]]["Parameters"] = parameters
-#    mlMetajson["Model " + model_code[-1]]["Model Description"] = description
-#    mlMetajson["Model " + model_code[-1]]["Model Advantage"] = advantage
-#    mlMetajson["Model " + model_code[-1]]["Model Drawback"] = drawback
-    
-
-
-
-#SIDS = ['ASM', 'AIA', 'ATG', 'ABW', 'BHS', 'BRB', 'BLZ', 'BES', 'VGB', 'CPV', 'COM', 'COK', 'CUB', 'CUW', 'DMA', 'DOM',
-#        'FJI', 'PYF',
-#        'GRD', 'GUM', 'GNB', 'GUY', 'HTI', 'JAM', 'KIR', 'MDV', 'MHL', 'MUS', 'FSM', 'MSR', 'NRU', 'NCL', 'NIU', 'MNP',
-#        'PLW', 'PNG', 'PRI',
-#        'KNA', 'LCA', 'VCT', 'WSM', 'STP', 'SYC', 'SGP', 'SXM', 'SLB', 'SUR', 'TLS', 'TON', 'TTO', 'TUV', 'VIR', 'VUT']
 
 ######################################################################################################
 
@@ -497,9 +443,7 @@ def processMLData(predDictionary):
     for datasetCode in predDictionary.keys():
         jsonDict[datasetCode]=dict()
         print(datasetCode)
-        #p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_predictions_"+years[0]+".csv"
-        #if os.path.exists(p):
-            #indicatorCodes=pd.read_csv(p).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist()
+
         indicatorCodes = []
         for i in predDictionary[datasetCode].keys():
             indicatorCodes.extend(predDictionary[datasetCode][i]["prediction"].columns.tolist())
@@ -620,4 +564,4 @@ with open(mlMetadata, "w") as write_file:
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
 
-git_push(COMMIT_MESSAGE)
+#git_push(COMMIT_MESSAGE)
