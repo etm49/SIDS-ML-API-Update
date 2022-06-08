@@ -568,4 +568,4 @@ with open(mlMetadata, "w") as write_file:
 COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
 
-#git_push(COMMIT_MESSAGE)
+git_push(COMMIT_MESSAGE)

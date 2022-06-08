@@ -28,7 +28,7 @@ class Model(Enum):
     sdg="SGD Regressor"
     xgbr = "XGBoost Regressor"
     lgbmr ="LGBM Regressor"
-    cat = "CatBoostRegressor"
+    #cat = "CatBoostRegressor"
     #Ridge="Ridge regressor"
 
 

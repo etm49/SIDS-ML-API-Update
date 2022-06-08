@@ -244,15 +244,15 @@ def model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, inte
         param8['regressor'] = [clf8]
         model_instances.append(clf8)
         params.append(param8)
-    if Model.cat.name in model_list:
-        clf9 = CatBoostRegressor(random_state=seed)
-        param9 = {}
-        #param9['regressor__n_estimators'] = [n_estimators]
-        param9['regressor__max_depth'] = [5, 10]  # Hard coded
+    #if Model.cat.name in model_list:
+    #    clf9 = CatBoostRegressor(random_state=seed)
+    #    param9 = {}
+    #    #param9['regressor__n_estimators'] = [n_estimators]
+    #    param9['regressor__max_depth'] = [5, 10]  # Hard coded
 
-        param9['regressor'] = [clf9]
-        model_instances.append(clf9)
-        params.append(param9)
+    #    param9['regressor'] = [clf9]
+    #    model_instances.append(clf9)
+    #    params.append(param9)
     if Model.lsvr.name in model_list:
         clf10 = LinearSVR(random_state=seed)
         param10 = {}
