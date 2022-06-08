@@ -151,9 +151,9 @@ if output_type == 'y':
         processMLData()
         with open(mlMetadata, "w") as write_file:
             json.dump(mlMetajson, write_file, indent=4)
-        COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
-
-        git_push()
+        COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+        print(COMMIT_MESSAGE)
+        git_push(COMMIT_MESSAGE)
 
 else: 
     print("convert output into a country by indicator format")

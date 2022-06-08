@@ -1,5 +1,5 @@
 # Automate
-
+To update  ML API first update the paths in the **constants.py** script
 ### Folder Structure
 - **data** - API folder strucutre where ML results are stored
 - **mlResults** - intermediate ML results format. Folder exists if training scripts temporarily save data in different formats
@@ -13,5 +13,7 @@
 
 ### Next steps
 - Improve parameter search space for gradient boost regressor and XGBoost regressor to reduce lack of meaningful learning (i.e. all feature importances being zero)
-- Start pushing to SIDS API repo (by updating repo path in constants.py)
+- Start pushing to SIDS API repo 
+- Merge scripts with SIDS ML Backend to allow simultaneous model improvements
 - Setup automatic monitoring of script runs
+
