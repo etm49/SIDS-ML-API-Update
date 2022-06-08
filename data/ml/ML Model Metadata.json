@@ -1,16 +1,9 @@
 {
-    "model2": {
-        "Modelling Approach": "year-by-year",
-        "Model Name": "Random Forest Regressor",
-        "Parameters": "n_estimators, maximum depth (tuned via cross-validation), initial_strategy=\"KNNimputer\"",
-        "Model Description": "A random forest is a meta estimator that fits a number of classifying decision trees on various sub-samples of the dataset. Run on a year-by-year basis ",
-        "Model Advantage": "uses averaging to improve the predictive accuracy and control over-fitting via bootsrapping",
-        "Model Drawback": "unknown"
-    },
+
     "Model 3": {
         "Modelling Approach": "year-by-year",
         "Model Name": "Gradient boost Regressor",
-        "Parameters": "loss_function, learning_rate, n_estimators, maximum depth (tuned via cross-validation), initial_strategy=\"KNNimputer\"",
+        "Parameters": "loss_function, learning_rate, n_estimators, maximum depth (tuned via cross-validation), initial_strategy=\\\"KNNimputer\\\"",
         "Model Description": "builds an additive model in a forward stage-wise fashion. In each stage a regression tree is fit on the negative gradient of the given loss function. Run on a year-by-year basis",
         "Model Advantage": "Higher point estimation accuracy",
         "Model Drawback": "Overfitting especially when there is noisy data"
@@ -38,5 +31,13 @@
         "Model Description": "later",
         "Model Advantage": "later",
         "Model Drawback": "later"
+    },
+    "Model 2": {
+        "Modelling Approach": "year-by-year",
+        "Model Name": "Random Forest Regressor",
+        "Parameters": "n_estimators, maximum depth (tuned via cross-validation), initial_strategy=\\\"KNNimputer\\\"",
+        "Model Description": "A random forest is a meta estimator that fits a number of classifying decision trees on various sub-samples of the dataset. Run on a year-by-year basis ",
+        "Model Advantage": "uses averaging to improve the predictive accuracy and reduce over-fitting via bootsrapping compared to decision trees.Processing high-dimensional data and feature-missing data are the strengths of random forest",
+        "Model Drawback": "Random forest predictions are more effective when the change in feature envrionment is minimal. That is, Random forest may overfit for data with much noise. It\u2019s also not easily interpretable. It might also struggle extrapolating linear trends"
     }
 }

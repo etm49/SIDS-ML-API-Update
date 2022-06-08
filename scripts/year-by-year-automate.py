@@ -287,7 +287,7 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
         targets = total_top_ranked(target_year=i,data=indicatorData,sids=SIDS, percent=percent,indicator_type="target")
         #predictors = total_top_ranked(target_year=i,data=indicatorData,SIDS=SIDS, percent=measure,indicator_type="predictor")
         print("target selected")
-        for j in targets[:10]: ########## For test
+        for j in targets: ########## For test
             manual_predictors=10
             target_year=i
             target=j
@@ -565,7 +565,7 @@ processMLData(large_dict)
 with open(mlMetadata, "w") as write_file:
     json.dump(mlMetajson, write_file, indent=4)
 # Push to git
-COMMIT_MESSAGE = ' '.join(['test:','add',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
 
 
 git_push(COMMIT_MESSAGE)
