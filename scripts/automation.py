@@ -39,7 +39,7 @@ output_type = get_inputs("Are model outputs in a country by indicator matrix for
 
 model_code,response = folderChecker()
 if (response in  ['replace','new']):
-    mlMetajson = metaUpdater(mlMetajson, model_code)
+    mlMetajson = metaUpdater(mlMetajson, model_code,model_approach)
     
 
 
@@ -136,6 +136,8 @@ def processMLData():
                                 indicatorJson["categoryImportances"][year]=categoryImportances
                         if not os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode):
                             os.makedirs(savepath+'model'+str(modelCode)+'/'+datasetCode)
+                        if "/" in indicator:
+                            indicator = indicator.replace("/"," ")
                         with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json', 'w') as outfile:
                             json.dump(indicatorJson, outfile,cls=NpEncoder)
 
@@ -152,8 +154,9 @@ if output_type == 'y':
         with open(mlMetadata, "w") as write_file:
             json.dump(mlMetajson, write_file, indent=4)
         COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
-        print(COMMIT_MESSAGE)
+        
         git_push(COMMIT_MESSAGE)
+        print(COMMIT_MESSAGE)
 
 else: 
     print("convert output into a country by indicator format")

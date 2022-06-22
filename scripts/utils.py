@@ -112,10 +112,10 @@ def folderChecker():
         response='new'
         return model_code, response
 
-def metaUpdater(mlMetajson, model_code):
+def metaUpdater(mlMetajson, model_code,approach):
     name = get_inputs("Model name for excel sheet")
     description = get_inputs("Model description for excel sheet")
-    modellingApproach = "year-by-year"
+    modellingApproach = approach
     parameters = get_inputs("Some of the parameters used or searched for excel sheet (alternatively type unknown)")
     advantage = get_inputs("What are the advantages of this model (alternatively type unknown)")
     drawback = get_inputs("what are the drawbacks of this model (alternatively type unknown)")
@@ -335,7 +335,7 @@ def git_push(COMMIT_MESSAGE):
         repo = Repo(PATH_OF_GIT_REPO)
         repo.git.add(all=True)
         repo.index.commit(COMMIT_MESSAGE)
-        origin = repo.remote(name='origin')
-        origin.push()
+        #origin = repo.remote(name='origin')
+        #origin.push()
     except:
         print('Some error occured while pushing the code')   
