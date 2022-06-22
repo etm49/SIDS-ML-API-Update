@@ -82,7 +82,7 @@ supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 
 model_code,response = folderChecker()
 if (response in  ['replace','new']):
-    mlMetajson = metaUpdater(mlMetajson, model_code)
+    mlMetajson = metaUpdater(mlMetajson, model_code,"year-by-year")
 
     
 
