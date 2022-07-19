@@ -11,9 +11,12 @@ To update  ML API first update the paths in the **constants.py** script
 	- constants.py script holding fixed constants such as data storage path and API path on local machine
 
 
+### 3 modelling approach structure
+
+<img src="./docs/images/modelling approaches.png?raw=true" height="500px">
+
 ### Next steps
 - Improve parameter search space for gradient boost regressor and XGBoost regressor to reduce lack of meaningful learning (i.e. all feature importances being zero)
 - Start pushing to SIDS API repo 
 - Merge scripts with SIDS ML Backend to allow simultaneous model improvements
 - Setup automatic monitoring of script runs
-
