@@ -69,94 +69,95 @@ def processMLData():
                 
         for datasetCode in datasetCodes:
             print(datasetCode)
-            p = mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+years[0]+".csv"
-            if os.path.exists(p):
-                indicatorCodes=pd.read_csv(p).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist()
-                for indicator in indicatorCodes[:100]:
-                    if indicator =="year":
-                        continue
-                    print(indicator)
-                    if (os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') & (response == 'update')):
-                        with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') as json_file:
-                                indicatorJson = json.load(json_file)
+            indicatorCodes = []
+            for ye in years:
+                pa = mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+ye+".csv"
+                if os.path.exists(pa):
+                    indicatorCodes.extend(pd.read_csv(pa).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist())
+                    indicatorCodes = list(set(indicatorCodes))
+            #p = mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+years[0]+".csv"
+            #if os.path.exists(p):
+            #    indicatorCodes=pd.read_csv(p).columns.drop(['Unnamed: 1','Country Code'],errors='ignore').tolist()
+            for indicator in indicatorCodes:
+                if indicator =="year":
+                    continue
+                print(indicator)
+                if (os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') & (response == 'update')):
+                    with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json') as json_file:
+                            indicatorJson = json.load(json_file)
 
-                    else: 
-                        indicatorJson={"data":{},"upperIntervals":{},"lowerIntervals":{},"categoryImportances":{},"featureImportances":{}}
-                    for year in years:
-                        if os.path.exists(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv"):
-                            predictionsDf=pd.read_csv(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
-                            lowerIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
-                            upperIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
-                            featureImportancesDf=pd.read_csv(mlResults+"model"+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
-                            
-                            yearValues={}
-                            upperIntervals={}
-                            lowerIntervals={}
-                            
-                            if indicator in predictionsDf.columns:
-                            
-                                countries=predictionsDf["Country Code"].unique().tolist()
-                                for country in countries:
-                                    value=predictionsDf[predictionsDf["Country Code"]==country][indicator].iloc[0]
-                                    lower=lowerIntervalsDf[lowerIntervalsDf["Country Code"]==country][indicator].iloc[0]
-                                    upper=upperIntervalsDf[upperIntervalsDf["Country Code"]==country][indicator].iloc[0]
+                else: 
+                    indicatorJson={"data":{},"upperIntervals":{},"lowerIntervals":{},"categoryImportances":{},"featureImportances":{}}
+                for year in years:
+                    if os.path.exists(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv"):
+                        predictionsDf=pd.read_csv(mlResults+"model"+modelCode+"/predictions/"+datasetCode+"_predictions_"+year+".csv")
+                        lowerIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/lower/"+datasetCode+"_lower_"+year+".csv")
+                        upperIntervalsDf=pd.read_csv(mlResults+"model"+modelCode+"/prediction intervals/upper/"+datasetCode+"_upper_"+year+".csv")
+                        featureImportancesDf=pd.read_csv(mlResults+"model"+modelCode+"/feature importances/"+datasetCode+"_feature_importance_"+year+".csv")
+                        
+                        yearValues={}
+                        upperIntervals={}
+                        lowerIntervals={}
+                        
+                        if indicator in predictionsDf.columns:
+                        
+                            countries=predictionsDf["Country Code"].unique().tolist()
+                            for country in countries:
+                                value=predictionsDf[predictionsDf["Country Code"]==country][indicator].iloc[0]
+                                lower=lowerIntervalsDf[lowerIntervalsDf["Country Code"]==country][indicator].iloc[0]
+                                upper=upperIntervalsDf[upperIntervalsDf["Country Code"]==country][indicator].iloc[0]
 
-                                    if not pd.isna(value):
-                                        yearValues[country]=value
-                                        
-                                    if not pd.isna(lower):
-                                        lowerIntervals[country]=lower
-                                        
-                                    if not pd.isna(upper):
-                                        upperIntervals[country]=upper                       
-                                                      
-                                indicatorFeaturesDf=featureImportancesDf[featureImportancesDf["predicted indicator"]==indicator]
-                                features=indicatorFeaturesDf["feature indicator"].unique().tolist()
-                                featureImportances={}
-                                for feature in features:
-                                    featureImportance=indicatorFeaturesDf[indicatorFeaturesDf["feature indicator"]==feature]["feature importance"].iloc[0]
-                                    featureImportances[feature]=featureImportance
+                                if not pd.isna(value):
+                                    yearValues[country]=value
                                     
-                                featuresMeta=allMeta[allMeta["Indicator Code"].isin(features)]
-                                categories=featuresMeta["Category"].unique().tolist()
+                                if not pd.isna(lower):
+                                    lowerIntervals[country]=lower
+                                    
+                                if not pd.isna(upper):
+                                    upperIntervals[country]=upper                       
+                                                    
+                            indicatorFeaturesDf=featureImportancesDf[featureImportancesDf["predicted indicator"]==indicator]
+                            features=indicatorFeaturesDf["feature indicator"].unique().tolist()
+                            featureImportances={}
+                            for feature in features:
+                                featureImportance=indicatorFeaturesDf[indicatorFeaturesDf["feature indicator"]==feature]["feature importance"].iloc[0]
+                                featureImportances[feature]=featureImportance
                                 
-                                categoryImportances={}
-                                
-                                for category in categories:
-                                    categoryTotal=0
-                                    for feature in featuresMeta[featuresMeta["Category"]==category]["Indicator Code"].unique().tolist():
-                                        importance=featureImportances[feature]
-                                        categoryTotal+=importance
-                                    categoryImportances[category]=categoryTotal
+                            featuresMeta=allMeta[allMeta["Indicator Code"].isin(features)]
+                            categories=featuresMeta["Category"].unique().tolist()
+                            
+                            categoryImportances={}
+                            
+                            for category in categories:
+                                categoryTotal=0
+                                for feature in featuresMeta[featuresMeta["Category"]==category]["Indicator Code"].unique().tolist():
+                                    importance=featureImportances[feature]
+                                    categoryTotal+=importance
+                                categoryImportances[category]=categoryTotal
 
-                                indicatorJson["data"][year]=yearValues
-                                indicatorJson["upperIntervals"][year]=upperIntervals
-                                indicatorJson["lowerIntervals"][year]=lowerIntervals
-                                indicatorJson["featureImportances"][year]=featureImportances
-                                indicatorJson["categoryImportances"][year]=categoryImportances
-                        if not os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode):
-                            os.makedirs(savepath+'model'+str(modelCode)+'/'+datasetCode)
-                        if "/" in indicator:
-                            indicator = indicator.replace("/"," ")
-                        with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json', 'w') as outfile:
-                            json.dump(indicatorJson, outfile,cls=NpEncoder)
+                            indicatorJson["data"][year]=yearValues
+                            indicatorJson["upperIntervals"][year]=upperIntervals
+                            indicatorJson["lowerIntervals"][year]=lowerIntervals
+                            indicatorJson["featureImportances"][year]=featureImportances
+                            indicatorJson["categoryImportances"][year]=categoryImportances
+                    if not os.path.exists(savepath+'model'+str(modelCode)+'/'+datasetCode):
+                        os.makedirs(savepath+'model'+str(modelCode)+'/'+datasetCode)
+                    if "/" in indicator:
+                        indicator = indicator.replace("/"," ")
+                    with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json', 'w') as outfile:
+                        json.dump(indicatorJson, outfile,cls=NpEncoder)
 
 
 if output_type == 'y':
 
-    if model_approach == "iterative":
-        # need different script setup
-        print("automation currently not implemented")
-        #p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_predictions"+".csv"
-        #temp_p = folder+"/Model "+modelCode+"/predictions/"+datasetCode+"_test"+"_predictions"+".csv"
-    else: 
-        processMLData()
-        with open(mlMetadata, "w") as write_file:
-            json.dump(mlMetajson, write_file, indent=4)
-        COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
-        
-        git_push(COMMIT_MESSAGE)
-        print(COMMIT_MESSAGE)
+
+    processMLData()
+    with open(mlMetadata, "w") as write_file:
+        json.dump(mlMetajson, write_file, indent=4)
+    COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+    
+    git_push(COMMIT_MESSAGE)
+    print(COMMIT_MESSAGE)
 
 else: 
     print("convert output into a country by indicator format")
