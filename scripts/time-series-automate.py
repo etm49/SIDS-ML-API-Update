@@ -12,35 +12,35 @@ from tqdm import tqdm
 
 from enums import Model, Interval
 from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
-from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater, git_push
 
 
-n= 10 #indicator cannot ignore more than this many sids countries
-m = 5 #indicator must have measurements for atleast 1/mth of the total number of years in the indicatorData
-
-seed = 100
-
-with open(mlMetadata) as json_file:
-    mlMetajson = json.load(json_file)
-
-repo = Repo(PATH_OF_GIT_REPO)
-repo.remotes.origin.pull()
-
-
-#Inputs to guide modelling
-model =get_inputs("Select model name",['rfr','gbr','etr'])
-
-start_year = get_inputs("year to start from? e.g. 2010")
-end_year = get_inputs("year to end at? e.g. 2019")
-
-supported_years = list(range(int(start_year), int(end_year)))
-
-model_code, response =  folderChecker()
-if (response in  ['replace','new']):
-    mlMetajson = metaUpdater(mlMetajson, model_code,"timeseries")
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 
 # Preprocess
 def series_extractor(indicator, ind_data,method,direction='both',d=1):
+    """
+        Interpolate ind_data using pandas interpolate method for filling missing timerseries data
+        Args:
+
+            indicator: indicator Code 
+            ind_data: indicatorData dataset
+            method: interpolation method. Options explained on https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html
+            direction: direction of filling missing values. explained onhttps://pandas.pydata.org/docs/reference/api/pandas.DataFrame.interpolate.html
+            d: order of polynomial for 'spline' and 'ploynomial' methods.
+
+        returns:
+            imp_data: interpolated indicatorData dataset for "indicator" and SIDS 
+    
+    """
     idx=pd.IndexSlice
     data = ind_data.loc[idx[indicator,SIDS],].copy()
     #missing = data.columns[data.isnull().any()].tolist()
@@ -58,10 +58,16 @@ def series_extractor(indicator, ind_data,method,direction='both',d=1):
 
 
 def missing_sids(indicator):
-    """SIDS that are never measured for this indicator"""
+    """Calculates the number of SIDS that are never measured for this indicator"""
     return len(list(set(SIDS)-set(indicatorData.loc(axis=0)[pd.IndexSlice[indicator,]].index)))
     
 def missing_years(indicator):
+    """Calcuates the number of missing years for this indicator
+    returns:
+        missing years count 
+        missing years as list
+        actual years for which the indicator is observed
+    """
     sumb = indicatorData.loc(axis=0)[pd.IndexSlice[indicator,]]
     sumb=sumb.isna().sum(axis=0).sort_values()/sumb.shape[0]
     return sumb[sumb>0.5].index.shape[0],sorted(sumb[sumb>0.5].index.tolist()), sorted(sumb[sumb<0.5].index.tolist())
@@ -69,6 +75,14 @@ def missing_years(indicator):
 
 
 def validity_check(ind_data,sids_count,years_count):
+    """ Returns indicators which satisfy certain amount of non-missing data
+    Args:
+        ind_data: indicatorData dataset
+        sids_count: threshold determining number of SIDS that are never measured for an indicator
+        years_count: indicator must have measurements for atleast 1/year_count of the total number of years in the indicatorData
+    Returns:
+        dataframe with valid indicators according to the threshold in the input arguments
+    """
     #ind_data = ind_data.set_index(["Indicator Code","Country Code"]).sort_index(axis=1).dropna(axis=0,how='all')#.interpolate('linear')
 
     indicators = []
@@ -76,7 +90,7 @@ def validity_check(ind_data,sids_count,years_count):
     missing_years_list = []
     missing_years_count_list = []
     actual_years_list = []
-    for i in indicatorData.index.levels[0]:
+    for i in ind_data.index.levels[0]:
         indicators.append(i)
 
         try:
@@ -94,14 +108,33 @@ def validity_check(ind_data,sids_count,years_count):
     return validity[(validity.missing_sids<sids_count) &(validity.missing_years_count<(len(indicatorData.columns)/years_count))]
 
 def preprocessing(ind_data, predictors,target_year,target):
-    dataCopy = ind_data.copy()
-    #dataCopy = dataCopy.set_index(["Indicator Code","Country Code"]).sort_index(axis=1).dropna(axis=0,how='all')#.interpolate('linear')
+    """
+    Transform the ind_data dataframe into a (country, year) by (indicator Code) by  creating the window and lag features.
+    the sliced data frame is reshaped into an multi-index data frame where each row represents a country and target history (also called window) pair. Each predictor column, on the other hand, represents the historical information (also called lag) of the indicator.
+    In addition, sample weight is generated such that target history (windows) further away from the target year are given small weights to force the model to focus on the relationship between predictors and indicators close in time to the target year.
+    For e.g.: For window 2, lag 3 and target year =2010, the dataframe generated looks like (where the values are represented by the corresponding years)
+                      Indicator/predictor    target
+                      lag3 lag2 lag1
+    country1 window1  2007 2008 2009         2010
+             window2  2006 2007 2008         2009
+    country2 window1  2007 2008 2009         2010
+             window2  2006 2007 2008         2009
 
-    #rename_names = dict()
-    #for i in dataCopy.columns:
-    #    rename_names[i] = int(i)
-        
-    #dataCopy.rename(columns=rename_names,inplace=True)
+    Args:
+        ind_data: indicatorData
+        predictors: list of predictors indicator codes
+        target_year: the target year under consideration for imputation
+        target: the indicator to be imputed
+    Returns:
+        X_train: subset of generated reshaped data where target is measured
+        X_test: subset of  generated reshaped data where target for target year is missing
+        y_train: X_train's corresponding target pandas series
+        sample_weight: pandas series with weights for the X_train observations/rows
+
+    
+    """
+
+    dataCopy = ind_data.copy()
 
     data = series_extractor(indicator=predictors,ind_data=dataCopy,method='linear',direction="both")
 
@@ -131,9 +164,7 @@ def preprocessing(ind_data, predictors,target_year,target):
         
         target_sub = target_data.loc(axis=1)[year]
         target_sub = pd.DataFrame(data=target_sub.to_numpy(), index=target_sub.index,columns=["target"]).unstack("Indicator Code").swaplevel(axis=1).sort_index(axis=1)
-    #     for i in sub.index:
-    #         if i not in target_sub.index:
-    #             target_sub.loc[i,target_sub.columns[0]] = [np.nan]
+
         target_sub["window"] = year
         target_sub.set_index('window',append=True,inplace=True)
         restructured_target = pd.concat([restructured_target,target_sub])
@@ -155,19 +186,26 @@ def preprocessing(ind_data, predictors,target_year,target):
     return X_train,X_test,y_train,sample_weight
 
 
-
-
-prediction, rmse, gs, best_model = model_trainer(X_train, X_test, y_train, seed, n_estimators, model_type, interval,sample_weight)
-prediction.droplevel(1)
-
 ######################################################################################################
 
-def query_and_train(model,supported_years,SIDS =SIDS,seed=seed):
+def query_and_train(model,supported_years,seed,SIDS =SIDS):
+    """
+    Run preprocessing, target & predictor validity check and model training over all indicators in a given target year.
+    Args:
+        model: model name/code to used for training. Visit enums.py for valid models
+        support_years: list of target years
+        seed: random_state setter
+        SIDS: list of SIDS iso-3 code
+    Returns:
+        predictions: data frame of perdictions with model, year, target, values as columns
+        indicator_importance: data frame of feature importance for each imputed indicator
+        performance: data frame of nrmse values for each imputed indicator
+    """
     predictions = pd.DataFrame()
     indicator_importance = pd.DataFrame()
     performance = pd.DataFrame()
     valid_predictors = validity_check(indicatorData,n,m).sort_values(by=["missing_years_count","missing_sids"]).Indicator.values.tolist()[:10]
-    valid_targets = validity_check(indicatorData, 50,2).sort_values(by=["missing_years_count","missing_sids"],ascending=False).Indicator.values.tolist()
+    valid_targets = validity_check(indicatorData, 50,1.25).sort_values(by=["missing_years_count","missing_sids"],ascending=False).Indicator.values.tolist()
     k= 0
     for i in supported_years:
         
@@ -214,7 +252,12 @@ def query_and_train(model,supported_years,SIDS =SIDS,seed=seed):
             feature_importance_bar["year"] = i
             feature_importance_bar["target"] = j
             feature_importance_bar["model"] = model
-            feature_importance_bar.set_index(["model","year","target"],inplace=True)
+            #feature_importance_bar.set_index(["model","year","target"],inplace=True)
+            #feature_importance_bar['predictor'] = feature_importance_bar.names.apply(lambda x: ast.literal_eval(x)[0])
+            #importanceSummed = feature_importance_bar.groupby(['model', 'year', 'target','predictor']).sum()
+            #importanceSorted = importanceSummed.reset_index().sort_values('values',ascending = False).groupby(['year', 'target']).head(10)
+            #importanceFinal = importanceSorted.sort_values(["year","target","values"], ascending=False)
+            #indicator_importance=pd.concat([indicator_importance,importanceFinal])
             indicator_importance=pd.concat([indicator_importance,feature_importance_bar])
             # Calculate mean normalized root mean squared error
             value_for_si = y_train.mean()
@@ -231,30 +274,45 @@ def query_and_train(model,supported_years,SIDS =SIDS,seed=seed):
             perfor["target"] = [j]
             perfor["model"] = [model]
 
-            perfor.set_index(["model","year","target"])
+            #perfor.set_index(["model","year","target"])
 
             performance = pd.concat([performance,perfor])
 
             prediction["year"] = i
             prediction["target"] = j
             prediction["model"] = model
-            prediction.set_index(["model","year","target"])
+            #prediction.set_index(["model","year","target"])
             predictions=pd.concat([predictions,prediction])
-    return predictions,indicator_importance.reset_index(),performance,gs
+    return predictions,indicator_importance,performance
 
-def replacement(dataset,year, save_path, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=prediction):
+def replacement(dataset,year, ind_data, ind_meta, pred ,sids=SIDS):
+    """Combined prediction results with the orignial indicatorData and reshape to country by indicator format
+    Args:
+        dataset: name of the dataset to be generated. For e.g. "wdi"
+        year: year under consideration
+        ind_data: indicatorData
+        ind_meta: indicatorMeta
+        pred: predictions dataframe from query_and_train functions
+    Returns:
+        results: filled reshaped (country by indicator code) indicatorData subset for year and dataset in inputs
+        lower: dataframe corresponding to results for lower bound of prediction intervals
+        upper: dataframe corresponding to results for upper bound of prediction intervals
+
+    """
     idx= pd.IndexSlice
-    dataset_codes = indicatorMeta[indicatorMeta.Dataset==dataset]["Indicator Code"].values.tolist()
-    subset_data = ind_data[ind_data["Indicator Code"].isin(dataset_codes)][["Country Code","Indicator Code",str(year)]].set_index(["Country Code","Indicator Code"]).stack(dropna=False).unstack("Indicator Code")
+    dataset_codes = ind_meta[ind_meta.Dataset==dataset]["Indicator Code"].values.tolist()
+    ind_data.reset_index(inplace = True)
+    subset_data = ind_data[ind_data["Indicator Code"].isin(dataset_codes)][["Country Code","Indicator Code",year]].set_index(["Country Code","Indicator Code"]).stack(dropna=False).unstack("Indicator Code")
     subset_data = subset_data.loc[idx[SIDS,:],:]
-    sub_pred = pred[(pred.year == year)&(pred.dataset==dataset)]#[["Country Code","prediction","target","year","dataset"]]
+    sub_pred = pred[(pred.year == year)&(pred.dataset==dataset)].reset_index()#[["Country Code","prediction","target","year","dataset"]]
     #sub_pred = sub_pred.drop(columns="dataset").set_index(["target","Country Code","year"]).stack().unstack("target")#.index.droplevel(2)
     columns = np.unique(sub_pred.target).tolist()
+    print(sub_pred)
     if not all(elem in subset_data.columns.tolist()  for elem in columns):
         print(columns)
         print(subset_data.columns)
     subset_data = subset_data[columns]
-    #print(subset_data)
+    print(subset_data)
     try:
         assert subset_data.isna().sum().sum() > 0, f"number of missing in subset_data is 0 for " + dataset + " in " + str(year)
     except:
@@ -277,7 +335,7 @@ def replacement(dataset,year, save_path, ind_data = indicatorData, ind_meta=indi
                             lower.loc[i,j] = sub_pred[(sub_pred["Country Code"]==i[0])&(sub_pred["target"]==j)].lower.values[0]
                             upper.loc[i,j] = sub_pred[(sub_pred["Country Code"]==i[0])&(sub_pred["target"]==j)].upper.values[0]
                         except:
-                            print(f"cannot find "+ i[0] + " for indicator " + j + " and year " + i[1])
+                            print(f"cannot find "+ i[0] + " for indicator " + j + " and year " + str(i[1]))
                     else:
                         lower.loc[i,j] = np.nan
                         upper.loc[i,j] = np.nan
@@ -286,7 +344,7 @@ def replacement(dataset,year, save_path, ind_data = indicatorData, ind_meta=indi
             assert i in results.index.levels[0], f"cannot find "+ i + " for dataset " + dataset + " and year " + str(year)
         except:
             print(f"cannot find "+ i + " for dataset " + dataset + " and year " + str(year))
-            missed = prediction[(prediction.year == year)&(prediction.dataset==dataset)&(prediction["Country Code"]==i)]
+            missed = pred[(pred.year == year)&(pred.dataset==dataset)&(pred["Country Code"]==i)]
             p = pd.DataFrame(data = [missed.prediction.values], columns=missed.target.values, index=[(i,year)])
             l = pd.DataFrame(data = [missed.lower.values], columns=missed.target.values, index=[(i,year)])
             u = pd.DataFrame(data = [missed.upper.values], columns=missed.target.values, index=[(i,year)])
@@ -295,15 +353,7 @@ def replacement(dataset,year, save_path, ind_data = indicatorData, ind_meta=indi
             upper=pd.concat([upper,u])
     return results,lower,upper
 
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
+
 
 # Turn into a API JSON format
 def processMLData(predDictionary):
@@ -381,58 +431,85 @@ def processMLData(predDictionary):
                 os.makedirs(savepath+'model'+str(modelCode)+'/'+datasetCode)
             with open(savepath+'model'+str(modelCode)+'/'+datasetCode+'/'+indicator+'.json', 'w') as outfile:
                 json.dump(indicatorJson, outfile,cls=NpEncoder)
-# Import data
-wb_data,indicatorMeta, datasetMeta, indicatorData = data_importer()
-indicatorData = indicatorData[indicatorData["Country Code"].isin(SIDS)]
-indicatorData = indicatorData.set_index(["Indicator Code","Country Code"]).sort_index(axis=1).dropna(axis=0,how='all')#.interpolate('linear')
-
-rename_names = dict()
-for i in indicatorData.columns:
-    rename_names[i] = int(i)
-    
-indicatorData.rename(columns=rename_names,inplace=True)
-
-predictions,indicator_importance,performance,gs = query_and_train(model,supported_years)
-
-indicator_importance['predictor'] = indicator_importance.names.apply(lambda x: ast.literal_eval(x)[0])
-
-indicator_importance.sort_values(["year","target","values"],inplace=True, ascending=False)
-importanceSummed = indicator_importance.groupby(['model', 'year', 'target','predictor']).sum()
-importanceSorted = importanceSummed.reset_index().sort_values('values',ascending = False).groupby(['year', 'target']).head(10)
-indicator_importance = importanceSorted.sort_values(["year","target","values"], ascending=False)
-
-# Merge with original
-large_dict = dict()
-targets = np.unique(predictions.target.values)
-predictions["dataset"] = predictions.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
-print(indicator_importance)
-indicator_importance["dataset"] = indicator_importance.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
-
-datasets = np.unique(indicatorMeta[indicatorMeta["Indicator Code"].isin(targets)].Dataset.values)
-indicator_importance.rename(columns={"target":"predicted indicator","predictor":"feature indicator","values":"feature importance"},inplace=True)
 
 
-for d in datasets:
-    large_dict[d]=dict()
-    print(d)
-    for y in np.unique(predictions[predictions.dataset == d].year.values):
-        large_dict[d][y] = dict()
-        results,lower,upper = replacement(d,y, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=predictions)
-        large_dict[d][y]["prediction"] = results
-        large_dict[d][y]["lower"] = lower
-        large_dict[d][y]["upper"] = upper
-        large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
+if __name__ == '__main__':
 
+    n= 15 #indicator cannot ignore more than this many sids countries
+    m = 2 #indicator must have measurements for atleast 1/mth of the total number of years in the indicatorData
+
+    seed = 100
+
+    with open(mlMetadata) as json_file:
+        mlMetajson = json.load(json_file)
+
+    repo = Repo(PATH_OF_GIT_REPO)
+    repo.remotes.origin.pull()
+
+
+    #Inputs to guide modelling
+    model =get_inputs("Select model name",['rfr','gbr','etr'])
+
+    start_year = get_inputs("year to start from? e.g. 2010")
+    end_year = get_inputs("year to end at? e.g. 2019")
+
+    supported_years = list(range(int(start_year), int(end_year)))
+
+    model_code, response =  folderChecker()
+    if (response in  ['replace','new']):
+        mlMetajson = metaUpdater(mlMetajson, model_code,"timeseries")
+    # Import data
+    wb_data,indicatorMeta, datasetMeta, indicatorData = data_importer()
+    indicatorData = indicatorData[indicatorData["Country Code"].isin(SIDS)]
+    indicatorData = indicatorData.set_index(["Indicator Code","Country Code"]).sort_index(axis=1).dropna(axis=0,how='all')#.interpolate('linear')
+
+    rename_names = dict()
+    for i in indicatorData.columns:
+        rename_names[i] = int(i)
         
-# Convert to API format
-processMLData(large_dict)
+    indicatorData.rename(columns=rename_names,inplace=True)
 
-#Update Metadata
-#metadata.to_excel(mlMetadata)
-with open(mlMetadata, "w") as write_file:
-    json.dump(mlMetajson, write_file, indent=4)
-# Push to git
-COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+    predictions,indicator_importance,performance = query_and_train(model,supported_years,seed=seed)
+    
+    #print(indicator_importance)
+    indicator_importance['predictor'] = indicator_importance["names"].apply(lambda x: x[0])
+
+    indicator_importance.sort_values(["year","target","values"],inplace=True, ascending=False)
+    importanceSummed = indicator_importance.groupby(['model', 'year', 'target','predictor']).sum()
+    importanceSorted = importanceSummed.reset_index().sort_values('values',ascending = False).groupby(['year', 'target']).head(10)
+    indicator_importance = importanceSorted.sort_values(["year","target","values"], ascending=False)
+
+    # Merge with original
+    large_dict = dict()
+    targets = np.unique(predictions.target.values)
+    predictions["dataset"] = predictions.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+    indicator_importance["dataset"] = indicator_importance.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+
+    datasets = np.unique(indicatorMeta[indicatorMeta["Indicator Code"].isin(targets)].Dataset.values)
+    indicator_importance.rename(columns={"target":"predicted indicator","predictor":"feature indicator","values":"feature importance"},inplace=True)
 
 
-git_push(COMMIT_MESSAGE)
+    for d in datasets:
+        large_dict[d]=dict()
+        print(d)
+        for y in np.unique(predictions[predictions.dataset == d].year.values):
+            large_dict[d][y] = dict()
+            results,lower,upper = replacement(dataset = d,year = y, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=predictions)
+            large_dict[d][y]["prediction"] = results
+            large_dict[d][y]["lower"] = lower
+            large_dict[d][y]["upper"] = upper
+            large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
+
+    print("large dictionary created")
+    # Convert to API format
+    processMLData(large_dict)
+
+    #Update Metadata
+    #metadata.to_excel(mlMetadata)
+    with open(mlMetadata, "w") as write_file:
+        json.dump(mlMetajson, write_file, indent=4)
+    # Push to git
+    COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+
+
+    git_push(COMMIT_MESSAGE)
