@@ -47,52 +47,6 @@ class NpEncoder(json.JSONEncoder):
 
 
 
-
-# In[3]:
-
-
-# Inputs
-
-
-seed = 100
-
-#Maximum percentage of missingness to consider in target (target threshold) 
-percent = 90 
-
-#Maximum number of missingess to consider in predictors (predictor threshold)
-measure = 40
-
-#Important metadata
-with open(mlMetadata) as json_file:
-    mlMetajson = json.load(json_file)
-
-
-# pull updated info from repo
-repo = Repo(PATH_OF_GIT_REPO)
-repo.remotes.origin.pull()
-
-
-#Inputs to guide modelling
-model =get_inputs("Select model name",[e.name for e in Model if e != Model.all])
-
-start_year = get_inputs("year to start from? e.g. 2010")
-end_year = get_inputs("year to end at? e.g. 2019")
-
-supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
-
-model_code,response = folderChecker()
-if (response in  ['replace','new']):
-    mlMetajson = metaUpdater(mlMetajson, model_code,"year-by-year")
-
-    
-
-######################################################################################################
-
-# #### Helper Functions
-
-# In[4]:
-
-
 ########## All functions for Two Level imputation model #########
 
 # Import from disk
@@ -109,7 +63,7 @@ def missingness(df):
     return missing_value_df.sort_values(["percent_missing","column_name"])
 
 
-def preprocessing(data,target, target_year,interpolator,SIDS, percent=measure):
+def preprocessing(data,target, target_year,interpolator,SIDS, measure):
 
     """
     Preprocess data into a format suitable for the two step imputation model by filling the most complete
@@ -118,7 +72,7 @@ def preprocessing(data,target, target_year,interpolator,SIDS, percent=measure):
         target: indicator whose values will be imputed
         target_year: the year under consideration
         interpolator: type of imputer to use for interpolation
-        precent: the most tolerable amount of missingness in a column
+        measure: the most tolerable amount of missingness in a column
 
     Returns:
         X_train: training data
@@ -248,7 +202,6 @@ def feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme, m
 
 
 
-# In[5]:
 
 ######################################################################################################
 def sids_top_ranked(target_year,data,sids, percent,indicator_type="target"):
@@ -278,7 +231,7 @@ def total_top_ranked(target_year,data,sids, percent,indicator_type="target"):
 
 ######################################################################################################
 
-def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=measure,seed=seed):
+def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
     predictions = pd.DataFrame()
     indicator_importance = pd.DataFrame()
     category_importance = pd.DataFrame()
@@ -296,31 +249,21 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
 
             t0 = time.time()
             # Train,test (for prediction not validation) split and preprocess
-            X_train,X_test,y_train = preprocessing(data=indicatorData,target=target, target_year=target_year,interpolator=interpolator,SIDS=SIDS,percent=percent)
+            X_train,X_test,y_train = preprocessing(data=indicatorData,target=target, target_year=target_year,interpolator=interpolator,SIDS=SIDS,measure= measure)
             # Dimension reduction based on scheme
             X_train,X_test,correlation = feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme,indicatorMeta)
-            data_code = indicatorMeta[indicatorMeta["Indicator Code"]==j].Dataset.values[0]
-            #t1 = time.time()
-            #timer
-            #sel_time = t1 - t0    
+            data_code = indicatorMeta[indicatorMeta["Indicator Code"]==j].Dataset.values[0]  
             print(i+"_"+j)
-            #for k in ["rfr"]:
-            #t0= time.time()
             estimators=100
             k=model # delete when looping
             interval="quantile"
             if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name, Model.cat.name]:
                 interval = "bootstrap"
-            SIDS=SIDS
-            seed=seed
-            percent=measure
 
             # training and prediction for X_test
-            #prediction,rmse,gs, best_model = model_trainer(X_train,X_test,y_train,seed,estimators, model,interval)
             prediction,rmse,gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight = None)
             prediction = prediction[prediction.index.isin(SIDS)]
             prediction = prediction.reset_index().rename(columns={"index":"country"})       
-            #feature_importance_bar = dict()
 
             t1 = time.time()
             #timer
@@ -390,7 +333,6 @@ def query_and_train(model,supported_years,SIDS =SIDS,percent=percent,measure=mea
     return predictions,indicator_importance.reset_index(),category_importance,performance
 
 
-# In[7]:
 ######################################################################################################
 # Merge results with original data and resturcture to a country by indicator formart per year
 def replacement(dataset,year, ind_data, ind_meta, sids, pred):
@@ -439,7 +381,6 @@ def replacement(dataset,year, ind_data, ind_meta, sids, pred):
                         
 
 
-# In[8]:
 # Turn into a API JSON format
 def processMLData(predDictionary):
     modelCode = model_code[-1]
@@ -521,51 +462,77 @@ def processMLData(predDictionary):
     #return jsonDict
 
 
-# In[9]:
 
 ######################################################################################################
-# Import data
-wb_data,indicatorMeta, datasetMeta, indicatorData = data_importer()
+if __name__ == '__main__':
+
+    seed = 100
+
+    #Maximum percentage of missingness to consider in target (target threshold) 
+    percent = 90 
+
+    #Maximum number of missingess to consider in predictors (predictor threshold)
+    measure = 40
+
+    #Important metadata
+    with open(mlMetadata) as json_file:
+        mlMetajson = json.load(json_file)
 
 
-
-# In[10]:
-
-# Train model
-predictions,indicator_importance,category_importance,performance = query_and_train(model,supported_years)
+    # pull updated info from repo
+    repo = Repo(PATH_OF_GIT_REPO)
+    repo.remotes.origin.pull()
 
 
-# In[ ]:
-# Merge with original
-large_dict = dict()
-targets = np.unique(predictions.target.values)
-predictions["dataset"] = predictions.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
-print(indicator_importance)
-indicator_importance["dataset"] = indicator_importance.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+    #Inputs to guide modelling
+    model =get_inputs("Select model name",[e.name for e in Model if e != Model.all])
 
-datasets = np.unique(indicatorMeta[indicatorMeta["Indicator Code"].isin(targets)].Dataset.values)
-indicator_importance.rename(columns={"target":"predicted indicator","names":"feature indicator","values":"feature importance"},inplace=True)
+    start_year = get_inputs("year to start from? e.g. 2010")
+    end_year = get_inputs("year to end at? e.g. 2019")
 
-for d in datasets:
-    large_dict[d]=dict()
-    print(d)
-    for y in np.unique(predictions[predictions.dataset == d].year.values):
-        large_dict[d][y] = dict()
-        results,lower,upper = replacement(d,y, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=predictions)
-        large_dict[d][y]["prediction"] = results
-        large_dict[d][y]["lower"] = lower
-        large_dict[d][y]["upper"] = upper
-        large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
+    supported_years = [str(x) for x in list(range(int(start_year), int(end_year)))]
 
-# Convert to API format
-processMLData(large_dict)
-
-#Update Metadata
-#metadata.to_excel(mlMetadata)
-with open(mlMetadata, "w") as write_file:
-    json.dump(mlMetajson, write_file, indent=4)
-# Push to git
-COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+    model_code,response = folderChecker()
+    if (response in  ['replace','new']):
+        mlMetajson = metaUpdater(mlMetajson, model_code,"year-by-year")
+    # Import data
+    wb_data,indicatorMeta, datasetMeta, indicatorData = data_importer()
 
 
-git_push(COMMIT_MESSAGE)
+    # Train model
+    predictions,indicator_importance,category_importance,performance = query_and_train(model = model,supported_years = supported_years,percent = percent, measure = measure, seed =seed)
+
+
+    # Merge with original
+    large_dict = dict()
+    targets = np.unique(predictions.target.values)
+    predictions["dataset"] = predictions.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+    print(indicator_importance)
+    indicator_importance["dataset"] = indicator_importance.target.apply(lambda x: indicatorMeta[indicatorMeta["Indicator Code"]==x].Dataset.values[0])
+
+    datasets = np.unique(indicatorMeta[indicatorMeta["Indicator Code"].isin(targets)].Dataset.values)
+    indicator_importance.rename(columns={"target":"predicted indicator","names":"feature indicator","values":"feature importance"},inplace=True)
+
+    for d in datasets:
+        large_dict[d]=dict()
+        print(d)
+        for y in np.unique(predictions[predictions.dataset == d].year.values):
+            large_dict[d][y] = dict()
+            results,lower,upper = replacement(d,y, ind_data = indicatorData, ind_meta=indicatorMeta, sids=SIDS, pred=predictions)
+            large_dict[d][y]["prediction"] = results
+            large_dict[d][y]["lower"] = lower
+            large_dict[d][y]["upper"] = upper
+            large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
+
+    # Convert to API format
+    processMLData(large_dict)
+
+    #Update Metadata
+    #metadata.to_excel(mlMetadata)
+    with open(mlMetadata, "w") as write_file:
+        json.dump(mlMetajson, write_file, indent=4)
+    # Push to git
+    COMMIT_MESSAGE = ' '.join(['add:',model_code,"from",start_year,'to',end_year, "(",response,")"])  
+
+
+    git_push(COMMIT_MESSAGE)
