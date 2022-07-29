@@ -187,15 +187,15 @@ def feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme, m
     X_train = X_train[prediction_features]
     X_test = X_test[prediction_features]
     
-    correlation = X_train[prediction_features].corr()
-    correlation.index = prediction_features
-    correlation.columns = prediction_features
+    #correlation = X_train[prediction_features].corr()
+    #correlation.index = prediction_features
+    #correlation.columns = prediction_features
     #names = meta[meta["Indicator Code"].isin(prediction_features)].Indicator.values
 
     #correlation.index = names
     #correlation.columns = names
         
-    return X_train,X_test,correlation.to_dict(orient ='split')
+    return X_train,X_test#,correlation.to_dict(orient ='split')
 ######################################################################################################
 
 # Train model and predict
@@ -234,7 +234,7 @@ def total_top_ranked(target_year,data,sids, percent,indicator_type="target"):
 def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
     predictions = pd.DataFrame()
     indicator_importance = pd.DataFrame()
-    category_importance = pd.DataFrame()
+    #category_importance = pd.DataFrame()
     performance = pd.DataFrame()
     for i in tqdm(supported_years):
         targets = total_top_ranked(target_year=i,data=indicatorData,sids=SIDS, percent=percent,indicator_type="target")
@@ -251,14 +251,14 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
             # Train,test (for prediction not validation) split and preprocess
             X_train,X_test,y_train = preprocessing(data=indicatorData,target=target, target_year=target_year,interpolator=interpolator,SIDS=SIDS,measure= measure)
             # Dimension reduction based on scheme
-            X_train,X_test,correlation = feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme,indicatorMeta)
+            X_train,X_test = feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme,indicatorMeta)
             data_code = indicatorMeta[indicatorMeta["Indicator Code"]==j].Dataset.values[0]  
             print(i+"_"+j)
             estimators=100
             k=model # delete when looping
-            interval="quantile"
-            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name, Model.cat.name]:
-                interval = "bootstrap"
+            interval= Interval.quantile.name
+            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name]:
+                interval = Interval.bootstrap.name
 
             # training and prediction for X_test
             prediction,rmse,gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight = None)
@@ -287,13 +287,13 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
             indicator_importance=pd.concat([indicator_importance,feature_importance_bar])
             # Make dataframes of feature importances for bar and pie visuals
             features = indicatorMeta[indicatorMeta["Indicator Code"].isin(X_train.columns)]
-            feature_importance_pie =pd.DataFrame(data={"category":features.Category.values,"values":feature_importances}).groupby("category").sum().reset_index()#.to_dict(orient="list")
+            #feature_importance_pie =pd.DataFrame(data={"category":features.Category.values,"values":feature_importances}).groupby("category").sum().reset_index()#.to_dict(orient="list")
             #print("feature_importance_pie")
-            feature_importance_pie["year"] = i
-            feature_importance_pie["target"] = j
-            feature_importance_pie["model"] = k
-            feature_importance_pie.set_index(["model","year","target"],inplace=True)
-            category_importance=pd.concat([category_importance,feature_importance_pie])
+            #feature_importance_pie["year"] = i
+            #feature_importance_pie["target"] = j
+            #feature_importance_pie["model"] = k
+            #feature_importance_pie.set_index(["model","year","target"],inplace=True)
+            #category_importance=pd.concat([category_importance,feature_importance_pie])
 
 
             #t1 = time.time()
@@ -324,13 +324,13 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
             prediction["model"] = k
             prediction.set_index(["model","year","target"])
             predictions=pd.concat([predictions,prediction])
-    if not os.path.exists(mlResults+ model_code + "/raw data from model"):
-        os.makedirs(mlResults+ model_code+ "/raw data from model")
-    predictions.to_csv(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv")
-    indicator_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv")
-    category_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_category_importance.csv")
-    performance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv")
-    return predictions,indicator_importance.reset_index(),category_importance,performance
+            if not os.path.exists(mlResults+ model_code + "/raw data from model"):
+                os.makedirs(mlResults+ model_code+ "/raw data from model")
+            predictions.to_csv(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv",mode='a', header=not os.path.exists(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv"))
+            indicator_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv"))
+            #category_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_category_importance.csv")
+            performance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv"))
+    return predictions,indicator_importance.reset_index(),performance
 
 
 ######################################################################################################
@@ -500,7 +500,7 @@ if __name__ == '__main__':
 
 
     # Train model
-    predictions,indicator_importance,category_importance,performance = query_and_train(model = model,supported_years = supported_years,percent = percent, measure = measure, seed =seed)
+    predictions,indicator_importance,performance = query_and_train(model = model,supported_years = supported_years,percent = percent, measure = measure, seed =seed)
 
 
     # Merge with original
