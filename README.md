@@ -88,7 +88,7 @@ The base estimator can be any sklearn regressor but currently there is no framew
 ### Running Scripts
 When one of the modelling scripts (time-series-automate.py, year-by-year-automate.py or iterative-automate.py) is run:
 - Any updates from the API remote repo is pulled automatically
-- The user is asked to select the model alogrithm according to their code in enums.py. The [metadata](data/api/data/ml/ML Model Metadata.json) information for the models currently in the API repo should be consulted before hand
+- The user is asked to select the model alogrithm according to their code in enums.py. The [Metadata](/data/api/data/ml/ML Model Metadata.json) information for the models currently in the API repo should be consulted before hand
 - Then the user inputs the range of years to train and predict on the model
 - The user then inputs the mode folder code according to the api (model1, model2, etc.)
 	- if the model folder code already exists in the API, the user is asked if they want to *"update"* the folder contents without replacing the associated metadata or *"replace"* the contents or the metadata together.
@@ -100,8 +100,8 @@ When one of the modelling scripts (time-series-automate.py, year-by-year-automat
 			- model description
 			- model advantages
 			- model drawback
-- The model will then train and raw model data in **mlResults/modelcode/raw data from model** folder with the associated model folder code
-- After the training and prediction is done for all selected years, the script will start to combine predictions with observed values and generate intermediate data including prediction, prediction intervals and feature importance tables **mlResults/modelcode/**. Here,
+- The model will then train and save raw model data in **mlResults/modelcode/raw data from model** folder with the associated model folder code
+- After the training and prediction is done for all selected years, the script will start to combine predictions with observed values and generate intermediate data including prediction/values, prediction intervals and feature importance tables in **mlResults/modelcode/**. 
 - Then the script will further process these tables into json files that match the API format and save them in the location provided by the user (this is savepath variable in the constants.py file). In the current setup, the [SIDS organization API repo](https://github.com/SIDS-Dashboard/api) is cloned in the **data** folder
 - The script's run will conclude after committing and pushing new json files (and metadata if needed) into the remote API repo.
 
