@@ -130,5 +130,5 @@ dmypy.json
 
 .DS_Store
 
-/mlResults/
+# API SIDS organization API repo saved here so no need to push it here
 data/api/
