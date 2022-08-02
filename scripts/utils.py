@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import json
 
 import os
 from git import Repo
@@ -18,6 +19,15 @@ from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
 from catboost import Pool, CatBoostRegressor
 
+class NpEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return super(NpEncoder, self).default(obj)
 
 # Import from disk
 def cou_ind_miss(Data):

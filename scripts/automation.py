@@ -5,7 +5,7 @@ import numpy as np
 from git import Repo
 
 from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
-from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push, NpEncoder
 
 with open(mlMetadata) as json_file:
     mlMetajson = json.load(json_file)
@@ -17,16 +17,6 @@ repo = Repo(PATH_OF_GIT_REPO)
 repo.remotes.origin.pull()
 
 
-
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
 
 model_approach = get_inputs("Please enter modelling approach", ["year-by-year","timeseries",'iterative'])
 #model_raw_data = get_inputs()

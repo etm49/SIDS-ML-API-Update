@@ -12,18 +12,8 @@ from tqdm import tqdm
 
 from enums import Model, Interval
 from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
-from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater, git_push
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater, git_push, NpEncoder
 
-
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
 
 # Preprocess
 def series_extractor(indicator, ind_data,method,direction='both',d=1):
@@ -227,10 +217,12 @@ def query_and_train(model,supported_years,seed,SIDS =SIDS):
             seed=seed
             try: 
                 X_train,X_test,y_train,sample_weight = preprocessing(indicatorData, predictors,i,j)
+                assert len(X_test) > 0
+                prediction, rmse, gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight)
+                prediction = prediction.droplevel(1)
             except:
                 continue
-            prediction, rmse, gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight)
-            prediction = prediction.droplevel(1)
+
             #print(prediction)
             t1 = time.time()
             #timer
@@ -252,12 +244,6 @@ def query_and_train(model,supported_years,seed,SIDS =SIDS):
             feature_importance_bar["year"] = i
             feature_importance_bar["target"] = j
             feature_importance_bar["model"] = model
-            #feature_importance_bar.set_index(["model","year","target"],inplace=True)
-            #feature_importance_bar['predictor'] = feature_importance_bar.names.apply(lambda x: ast.literal_eval(x)[0])
-            #importanceSummed = feature_importance_bar.groupby(['model', 'year', 'target','predictor']).sum()
-            #importanceSorted = importanceSummed.reset_index().sort_values('values',ascending = False).groupby(['year', 'target']).head(10)
-            #importanceFinal = importanceSorted.sort_values(["year","target","values"], ascending=False)
-            #indicator_importance=pd.concat([indicator_importance,importanceFinal])
             indicator_importance=pd.concat([indicator_importance,feature_importance_bar])
             # Calculate mean normalized root mean squared error
             value_for_si = y_train.mean()
@@ -299,12 +285,13 @@ def replacement(dataset,year, ind_data, ind_meta, pred ,sids=SIDS):
         upper: dataframe corresponding to results for upper bound of prediction intervals
 
     """
+    pred.reset_index(inplace = True)
     idx= pd.IndexSlice
     dataset_codes = ind_meta[ind_meta.Dataset==dataset]["Indicator Code"].values.tolist()
     ind_data.reset_index(inplace = True)
     subset_data = ind_data[ind_data["Indicator Code"].isin(dataset_codes)][["Country Code","Indicator Code",year]].set_index(["Country Code","Indicator Code"]).stack(dropna=False).unstack("Indicator Code")
     subset_data = subset_data.loc[idx[SIDS,:],:]
-    sub_pred = pred[(pred.year == year)&(pred.dataset==dataset)].reset_index()#[["Country Code","prediction","target","year","dataset"]]
+    sub_pred = pred[(pred.year == year)&(pred.dataset==dataset)]#[["Country Code","prediction","target","year","dataset"]]
     #sub_pred = sub_pred.drop(columns="dataset").set_index(["target","Country Code","year"]).stack().unstack("target")#.index.droplevel(2)
     columns = np.unique(sub_pred.target).tolist()
     print(sub_pred)
@@ -357,9 +344,12 @@ def replacement(dataset,year, ind_data, ind_meta, pred ,sids=SIDS):
 
 # Turn into a API JSON format
 def processMLData(predDictionary):
+
+    print("in processMLData")
     modelCode = model_code[-1]
     jsonDict = dict()
     for datasetCode in predDictionary.keys():
+        print("looping dataset codes")
         jsonDict[datasetCode]=dict()
         print(datasetCode)
 
@@ -368,6 +358,7 @@ def processMLData(predDictionary):
             indicatorCodes.extend(predDictionary[datasetCode][i]["prediction"].columns.tolist())
         indicatorCodes = list(set(indicatorCodes))
         for indicator in indicatorCodes:
+            print("looping through indicator codes")
             if indicator =="year":
                 continue
             # If json file already exists, update that (important if running script in segments)
@@ -378,6 +369,7 @@ def processMLData(predDictionary):
             else: 
                 indicatorJson={"data":{},"upperIntervals":{},"lowerIntervals":{},"categoryImportances":{},"featureImportances":{}}
             for year in predDictionary[datasetCode].keys():
+                    print("looping through years")
                     predictionsDf = predDictionary[datasetCode][year]["prediction"].reset_index().rename(columns={"level_1":"year"})
                     lowerIntervalsDf = predDictionary[datasetCode][year]["lower"].reset_index().rename(columns={"level_1":"year"})
                     upperIntervalsDf = predDictionary[datasetCode][year]["upper"].reset_index().rename(columns={"level_1":"year"})
@@ -499,7 +491,18 @@ if __name__ == '__main__':
             large_dict[d][y]["lower"] = lower
             large_dict[d][y]["upper"] = upper
             large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
-
+            # Save these intermediate results
+            if not os.path.exists(mlResults+ model_code +"/predictions"):
+                os.makedirs(mlResults+ model_code +"/predictions")
+            if not os.path.exists(mlResults+ model_code +"/prediction intervals/"):
+                os.makedirs(mlResults+ model_code +"/prediction intervals/")
+            if not os.path.exists(mlResults+ model_code +"/feature importances"):
+                os.makedirs(mlResults+ model_code +"/feature importances")
+            large_dict[d][y]["prediction"].to_csv(mlResults+ model_code +"/predictions"+"/"+d+"_predictions_"+str(y)+".csv")
+            large_dict[d][y]["lower"].to_csv(mlResults+ model_code +"/prediction intervals/"+"lower"+"/"+d+"_lower_"+str(y)+".csv")
+            large_dict[d][y]["upper"].to_csv(mlResults+ model_code +"/prediction intervals/"+"upper"+"/"+d+"_upper_"+str(y)+".csv")
+            large_dict[d][y]["importance"].to_csv(mlResults+ model_code +"/feature importances"+"/"+d+"_feature_importance_"+str(y)+".csv")
+    
     print("large dictionary created")
     # Convert to API format
     processMLData(large_dict)

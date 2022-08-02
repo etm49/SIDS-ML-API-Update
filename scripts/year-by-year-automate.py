@@ -21,8 +21,8 @@ from sklearn.experimental import enable_iterative_imputer  # noqa
 from sklearn.impute import IterativeImputer
 from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor,GradientBoostingRegressor
 from sklearn.feature_selection import RFE
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV, cross_val_predict
+#from sklearn.pipeline import Pipeline
+#from sklearn.model_selection import GridSearchCV, cross_val_predict
 
 
 #!pip install pca
@@ -30,20 +30,12 @@ from pca import pca
 from tqdm import tqdm
 
 from constants import mlMetadata, DATASETS_PATH, SIDS, savepath, mlResults, PATH_OF_GIT_REPO
-from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push
+from utils import data_importer, model_trainer, get_inputs, folderChecker, metaUpdater,git_push, NpEncoder
 from enums import Model, Interval, Interpolator, Schema
 
 ######################################################################################################
 
-class NpEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return super(NpEncoder, self).default(obj)
+
 
 
 
@@ -249,19 +241,22 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
 
             t0 = time.time()
             # Train,test (for prediction not validation) split and preprocess
-            X_train,X_test,y_train = preprocessing(data=indicatorData,target=target, target_year=target_year,interpolator=interpolator,SIDS=SIDS,measure= measure)
-            # Dimension reduction based on scheme
-            X_train,X_test = feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme,indicatorMeta)
-            data_code = indicatorMeta[indicatorMeta["Indicator Code"]==j].Dataset.values[0]  
-            print(i+"_"+j)
-            estimators=100
-            k=model # delete when looping
-            interval= Interval.quantile.name
-            if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name]:
-                interval = Interval.bootstrap.name
+            try:
+                X_train,X_test,y_train = preprocessing(data=indicatorData,target=target, target_year=target_year,interpolator=interpolator,SIDS=SIDS,measure= measure)
+                # Dimension reduction based on scheme
+                X_train,X_test = feature_selection(X_train,X_test,y_train,target, manual_predictors,scheme,indicatorMeta)
+                data_code = indicatorMeta[indicatorMeta["Indicator Code"]==j].Dataset.values[0]  
+                print(i+"_"+j)
+                estimators=100
+                k=model # delete when looping
+                interval= Interval.quantile.name
+                if model in [Model.esvr.name,Model.sdg.name,Model.nusvr, Model.lsvr.name, Model.xgbr.name, Model.lgbmr.name]:
+                    interval = Interval.bootstrap.name
 
-            # training and prediction for X_test
-            prediction,rmse,gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight = None)
+                # training and prediction for X_test
+                prediction,rmse,gs, best_model = model_trainer(X_train, X_test, y_train, seed, estimators, model, interval,sample_weight = None)
+            except:
+                continue
             prediction = prediction[prediction.index.isin(SIDS)]
             prediction = prediction.reset_index().rename(columns={"index":"country"})       
 
@@ -285,20 +280,6 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
             feature_importance_bar["model"] = k
             feature_importance_bar.set_index(["model","year","target"],inplace=True)
             indicator_importance=pd.concat([indicator_importance,feature_importance_bar])
-            # Make dataframes of feature importances for bar and pie visuals
-            features = indicatorMeta[indicatorMeta["Indicator Code"].isin(X_train.columns)]
-            #feature_importance_pie =pd.DataFrame(data={"category":features.Category.values,"values":feature_importances}).groupby("category").sum().reset_index()#.to_dict(orient="list")
-            #print("feature_importance_pie")
-            #feature_importance_pie["year"] = i
-            #feature_importance_pie["target"] = j
-            #feature_importance_pie["model"] = k
-            #feature_importance_pie.set_index(["model","year","target"],inplace=True)
-            #category_importance=pd.concat([category_importance,feature_importance_pie])
-
-
-            #t1 = time.time()
-            #timer
-            #exec_time = t1 - t0
 
             # Calculate mean normalized root mean squared error
             value_for_si = y_train.mean()
@@ -326,10 +307,9 @@ def query_and_train(model,supported_years, percent,measure,seed,SIDS =SIDS):
             predictions=pd.concat([predictions,prediction])
             if not os.path.exists(mlResults+ model_code + "/raw data from model"):
                 os.makedirs(mlResults+ model_code+ "/raw data from model")
-            predictions.to_csv(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv",mode='a', header=not os.path.exists(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv"))
-            indicator_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv"))
-            #category_importance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_category_importance.csv")
-            performance.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv"))
+            prediction.to_csv(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv",mode='a', header=not os.path.exists(mlResults + model_code + "/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_predictions.csv"))
+            feature_importance_bar.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_indicator_importance.csv"))
+            perfor.to_csv(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv",mode='a', header=not os.path.exists(mlResults + model_code +"/raw data from model" + "/"+start_year+"_"+end_year+"_"+model+"_performance.csv"))
     return predictions,indicator_importance.reset_index(),performance
 
 
@@ -523,6 +503,17 @@ if __name__ == '__main__':
             large_dict[d][y]["lower"] = lower
             large_dict[d][y]["upper"] = upper
             large_dict[d][y]["importance"] = indicator_importance[((indicator_importance.year == y)&(indicator_importance.dataset==d))][["predicted indicator","feature indicator","feature importance"]]
+            # Save these intermediate results
+            if not os.path.exists(mlResults+ model_code +"/predictions"):
+                os.makedirs(mlResults+ model_code +"/predictions")
+            if not os.path.exists(mlResults+ model_code +"/prediction intervals/"):
+                os.makedirs(mlResults+ model_code +"/prediction intervals/")
+            if not os.path.exists(mlResults+ model_code +"/feature importances"):
+                os.makedirs(mlResults+ model_code +"/feature importances")
+            large_dict[d][y]["prediction"].to_csv(mlResults+ model_code +"/predictions"+"/"+d+"_predictions_"+str(y)+".csv")
+            large_dict[d][y]["lower"].to_csv(mlResults+ model_code +"/prediction intervals/"+"lower"+"/"+d+"_lower_"+str(y)+".csv")
+            large_dict[d][y]["upper"].to_csv(mlResults+ model_code +"/prediction intervals/"+"upper"+"/"+d+"_upper_"+str(y)+".csv")
+            large_dict[d][y]["importance"].to_csv(mlResults+ model_code +"/feature importances"+"/"+d+"_feature_importance_"+str(y)+".csv")
 
     # Convert to API format
     processMLData(large_dict)
