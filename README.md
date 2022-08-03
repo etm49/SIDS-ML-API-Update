@@ -85,6 +85,11 @@ The iterative imputer is an experimental estimator which models each feature wit
 The base estimator can be any sklearn regressor but currently there is no framework for hyperparameter tuning.
 
 
+**The plots below shows the main steps for the year-by-year (left) and time-series (right) approach on example pseudo-data.**
+year-by-year            |  time-series
+:-------------------------:|:-------------------------:
+<img src="./docs/images/year-by-year.png?raw=true" height="500px">  |  <img src="./docs/images/timeseries.png?raw=true" height="500px">
+
 ### Running Scripts
 When one of the modelling scripts (time-series-automate.py, year-by-year-automate.py or iterative-automate.py) is run:
 - Any updates from the API remote repo is pulled automatically
